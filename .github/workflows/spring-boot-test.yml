@@ -8,16 +8,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      SPOTTER_JWT_SECRET: spotter-test-action-secret-not-used-in-deployment
+      FESTI_JWT_SECRET: festi-test-action-secret-not-used-in-deployment
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
           cache: gradle
 
       - name: Run tests
