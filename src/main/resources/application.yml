@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: festi-backend
+  datasource:
+    url: ${FESTI_DATABASE_URL:jdbc:postgresql://localhost:5432/festi}
+    username: ${FESTI_DATABASE_USERNAME:festi}
+    password: ${FESTI_DATABASE_PASSWORD:festi}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+
+festi:
+  jwt:
+    secret: ${FESTI_JWT_SECRET:local-dev-secret-change-me}
+    access-token-expiration: ${FESTI_JWT_ACCESS_TOKEN_EXPIRATION:3600}
