@@ -91,7 +91,6 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 
 ## Development Notes
 
-- `API-ENDPOINTS.md`의 `UPDATE` 표기는 구현 시 `PATCH`로 정규화합니다.
 - DB schema는 PostgreSQL, UUID, `TIMESTAMPTZ`, enum 타입을 기준으로 Flyway migration에서 관리합니다.
 - 비밀번호는 평문 저장하지 않고 BCrypt hash로 저장합니다.
 - JWT는 `Authorization: Bearer <token>` 형식으로 전달합니다.
