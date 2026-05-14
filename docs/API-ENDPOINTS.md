@@ -56,14 +56,14 @@
 | GET | /api/waitings | 자신의 전체 웨이팅 조회 | 일반 사용자 |
 | GET | /api/booths/:boothId/waitings | 부스 웨이팅 목록 | 부스 관리자 |
 | POST | /api/waitings/:waitingId/call | 호출 | 부스 관리자 |
-| UPDATE | /api/waitings/:waitingId/status | 입장 처리 | 부스 관리자 |
-| UPDATE | /api/booths/:boothId/waitings/status | 웨이팅 오픈/마감 | 부스 관리자 |
+| PATCH | /api/waitings/:waitingId/status | 입장 처리 | 부스 관리자 |
+| PATCH | /api/booths/:boothId/waitings/status | 웨이팅 오픈/마감 | 부스 관리자 |
 
 ## 축제 정보
     
 | method | endpoint | 설명 | 권한 |
 | --- | --- | --- | --- |
 | GET | /api/festival | 축제 정보(기간 등) 조회 | 모두 |
-| UPDATE | /api/festival | 축제 정보 수정 | 축제 관리자 |
+| PATCH | /api/festival | 축제 정보 수정 | 축제 관리자 |
 | GET | /api/festival/notices | 축제 공지사항 조회 | 모두 |
 | POST | /api/festival/notices | 축제 공지사항 추가 | 축제 관리자 |
