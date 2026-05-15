@@ -1,0 +1,336 @@
+# Festi-Backend Implementation Plan
+
+## Summary
+
+Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD를 기준으로 도메인 모델을 구성하고 JWT 기반 인증/인가를 적용한다.
+
+현재 구현은 단계별 PR로 나누어 진행한다.
+
+| Priority | Scope | Status |
+| --- | --- | --- |
+| 1 | Spring Boot/Gradle 프로젝트 생성, Java 25 설정, 테스트 워크플로우 수정 | Done |
+| 2 | 공통 설정: PostgreSQL, Flyway, JPA auditing, 공통 예외 응답, validation | Done |
+| 3 | ERD 기반 Entity, enum, Repository, migration 작성 | Next |
+| 4 | User/Auth/JWT 구현 | Pending |
+| 5 | SecurityConfig와 권한 체계 적용 | Pending |
+| 6 | 공개 조회 API 구현 | Pending |
+| 7 | 축제 관리자 API 구현 | Pending |
+| 8 | 부스 관리자 API 구현 | Pending |
+| 9 | 웨이팅 API 구현 | Pending |
+| 10 | controller/service/repository 테스트 보강 | Pending |
+
+## Tech Stack
+
+- Java 25
+- Spring Boot 4.0.x
+- Gradle 9.x
+- Spring Web
+- Spring Validation
+- Spring Security
+- Spring OAuth2 Resource Server
+- Spring Data JPA
+- PostgreSQL
+- Flyway
+- JUnit 5 / Spring Boot Test / Spring Security Test
+
+## Priority 1: Project Initialization
+
+Spring Boot 프로젝트의 실행 가능한 최소 구조를 만든다.
+
+- `com.festi.backend` 루트 패키지 생성
+- Gradle Wrapper 추가
+- Java toolchain을 Java 25로 설정
+- Spring Boot 4.0.x 의존성 구성
+- 기본 `FestiBackendApplication` 추가
+- `application.yml` 기본 설정 추가
+- GitHub Actions 테스트 워크플로우를 JDK 25 기준으로 수정
+- `./gradlew test`가 통과하는 최소 smoke test 추가
+
+## Priority 2: Common Infrastructure
+
+도메인 Entity와 API 구현 전에 모든 기능이 공유할 공통 기반을 고정한다.
+
+- PostgreSQL 연결 설정
+  - `FESTI_DATABASE_URL`
+  - `FESTI_DATABASE_USERNAME`
+  - `FESTI_DATABASE_PASSWORD`
+  - `ddl-auto: validate`
+  - `open-in-view: false`
+- 테스트 profile 설정
+  - `application-test.yml`
+  - H2 기반 context test
+- Flyway 기본 설정
+  - `src/main/resources/db/migration`
+  - baseline migration
+- JPA auditing
+  - `@EnableJpaAuditing`
+  - `BaseTimeEntity`
+- 공통 예외 처리
+  - `ErrorCode`
+  - `FestiException`
+  - `BadRequestException`
+  - `ConflictException`
+  - `NotFoundException`
+  - `GlobalExceptionHandler`
+- 공통 에러 응답
+  - `ErrorResponse`
+  - validation details는 민감 입력값 노출을 피하기 위해 rejected value를 포함하지 않는다.
+
+## Priority 3: Entity, Enum, Repository, Migration
+
+ERD를 PostgreSQL 기준으로 구현한다. 이 단계에서는 Controller/Service API 동작보다 데이터 모델의 정확성을 우선한다.
+
+### Entities
+
+- `User`
+  - `id`, `email`, `passwordHash`, `name`, `phone`, `role`, `createdAt`, `updatedAt`
+  - `email` unique
+- `Booth`
+  - `id`, `managerId`, `name`, `category`, `type`, `description`, `operatingHours`, `imageUrl`, `isActive`, `isWaitingOpen`, `createdAt`, `updatedAt`
+- `MenuItem`
+  - `id`, `boothId`, `name`, `price`, `description`, `imageUrl`, `isSoldOut`, `sortOrder`, `createdAt`, `updatedAt`
+- `BoothLocation`
+  - `id`, `boothId`, `type`, `mapIndex`, `day`, `zoneLabel`, `createdAt`, `updatedAt`
+  - DB column은 `index` 대신 `map_index`를 사용한다.
+- `Waiting`
+  - `id`, `boothId`, `userId`, `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`
+- `BoothAdminAssignment`
+  - `id`, `boothId`, `userId`, `grantedBy`, `createdAt`
+- `FestivalInfo`
+  - `id`, `name`, `startDate`, `endDate`, `description`, `updatedAt`
+- `FestivalNotice`
+  - `id`, `title`, `content`, `createdBy`, `createdAt`, `updatedAt`
+
+### Enums
+
+- `UserRole`
+  - `USER`
+  - `BOOTH_MANAGER`
+  - `FESTIVAL_ADMIN`
+- `BoothCategory`
+  - `FOOD`
+  - `BEVERAGE`
+  - `SNACK`
+  - `GAME`
+  - `EXHIBITION`
+  - `OTHER`
+- `BoothType`
+  - `DAY`
+  - `NIGHT`
+- `WaitingStatus`
+  - `WAITING`
+  - `CALLED`
+  - `SEATED`
+  - `CANCELLED`
+
+### Repositories
+
+- `UserRepository`
+  - `findByEmail`
+  - `existsByEmail`
+- `BoothRepository`
+  - type/category/active 기반 조회
+- `MenuItemRepository`
+  - `findByBoothIdOrderBySortOrder`
+- `BoothLocationRepository`
+  - `findByDayAndTypeOrderByMapIndex`
+- `WaitingRepository`
+  - `findByUserId`
+  - `findByBoothIdAndStatusOrderByRegisteredAt`
+- `BoothAdminAssignmentRepository`
+  - 부스 관리자 권한 확인용 query
+- `FestivalInfoRepository`
+- `FestivalNoticeRepository`
+
+## Priority 4: User/Auth/JWT
+
+회원가입, 로그인, 본인 정보 API를 구현한다.
+
+- `AuthController`
+  - `POST /api/auth/signup`
+  - `POST /api/auth/login`
+- `UserController`
+  - `GET /api/users/me`
+  - `PATCH /api/users/me`
+  - `DELETE /api/users/me`
+- `AuthService`
+  - 회원가입 시 기본 role은 `USER`
+  - 비밀번호는 BCrypt hash로 저장
+  - 로그인 성공 시 JWT access token 발급
+- JWT claim
+  - `sub`: user id
+  - `email`
+  - `role`
+  - `iat`
+  - `exp`
+- JWT secret
+  - `FESTI_JWT_SECRET`
+- refresh token은 v1 범위에서 제외한다.
+
+## Priority 5: Security and Authorization
+
+Spring Security 기반 인증/인가 구조를 확정한다.
+
+- `SecurityConfig`
+  - stateless session
+  - CSRF disabled for token API
+  - CORS 기본 정책
+  - JWT resource server 설정
+- 인증 객체
+  - JWT claim에서 user id/email/role을 읽어 custom principal로 변환
+- 접근 제어
+  - 공개 API는 `permitAll`
+  - 사용자 API는 authenticated
+  - 관리자 API는 role + 도메인 소유권 검증
+- 부스 관리자 권한
+  - 단순 role만 보지 않는다.
+  - `BoothAdminAssignment` 또는 `booths.managerId` 기준으로 해당 부스 담당자인지 확인한다.
+  - `FESTIVAL_ADMIN`은 부스 관리자 권한도 통과한다.
+
+## Priority 6: Public Read APIs
+
+인증 없이 조회 가능한 API를 먼저 구현한다.
+
+- `GET /api/booths`
+  - `day`, `type` filter
+- `GET /api/booths/{boothId}`
+- `GET /api/booths/{boothId}/menus`
+- `GET /api/locations`
+  - `day`, `type` filter
+- `GET /api/festival`
+- `GET /api/festival/notices`
+
+## Priority 7: Festival Admin APIs
+
+축제 관리자 권한이 필요한 API를 구현한다.
+
+- `POST /api/booths`
+- `DELETE /api/booths/{boothId}`
+- `POST /api/locations`
+- `PATCH /api/locations/{locationId}`
+- `DELETE /api/locations/{locationId}`
+- `PATCH /api/festival`
+- `POST /api/festival/notices`
+
+`API-ENDPOINTS.md`의 `UPDATE` 표기는 `PATCH`로 정규화한다.
+
+## Priority 8: Booth Manager APIs
+
+부스 관리자 권한이 필요한 API를 구현한다.
+
+- `PATCH /api/booths/{boothId}`
+- `POST /api/booths/{boothId}/menus`
+- `PATCH /api/booths/{boothId}/menus/{menuId}`
+- `DELETE /api/booths/{boothId}/menus/{menuId}`
+- `POST /api/booths/{boothId}/menus/{menuId}/sold-out`
+
+메뉴 생성/수정은 야간 부스에서만 허용한다.
+
+## Priority 9: Waiting APIs
+
+웨이팅 기능을 구현한다.
+
+- 일반 사용자
+  - `POST /api/booths/{boothId}/waitings`
+  - `DELETE /api/waitings/{waitingId}`
+  - `GET /api/waitings`
+- 부스 관리자
+  - `GET /api/booths/{boothId}/waitings`
+  - `POST /api/waitings/{waitingId}/call`
+  - `PATCH /api/waitings/{waitingId}/status`
+  - `PATCH /api/booths/{boothId}/waitings/status`
+
+검증 규칙:
+
+- 웨이팅은 야간 부스에만 등록할 수 있다.
+- 부스의 웨이팅이 open 상태일 때만 등록할 수 있다.
+- 웨이팅 취소는 본인만 가능하다.
+- 호출 시 `callCount`를 증가시킨다.
+- 상태 전이는 `WAITING -> CALLED -> SEATED` 흐름을 기본으로 하고, 사용자 취소는 `CANCELLED`로 처리한다.
+
+## Priority 10: Test Coverage
+
+기능별 단위/통합 테스트를 보강한다.
+
+- `AuthServiceTest`
+  - 회원가입
+  - 중복 이메일
+  - 비밀번호 hash 저장
+  - 로그인 성공/실패
+  - JWT claim 검증
+- `SecurityConfigTest`
+  - public endpoint 접근
+  - 인증 필요 endpoint 401
+  - 권한 부족 403
+- `BoothServiceTest`
+  - day/type filter
+  - festival admin 등록/삭제
+  - booth manager 수정 권한
+- `MenuServiceTest`
+  - 야간 부스 메뉴 생성 성공
+  - 주간 부스 메뉴 생성 실패
+  - 품절 처리
+- `LocationServiceTest`
+  - 날짜/타입별 배치도 조회
+  - 위치 등록/수정/삭제
+- `WaitingServiceTest`
+  - 웨이팅 등록
+  - 본인 취소
+  - 호출 시 `callCount` 증가
+  - 상태 전이 검증
+  - 오픈/마감 검증
+- `FestivalServiceTest`
+  - 축제 정보 조회/수정
+  - 공지 등록/조회
+
+CI acceptance 기준은 `./gradlew test` 통과다.
+
+## API Access Policy
+
+### Permit All
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET /api/booths`
+- `GET /api/booths/{boothId}`
+- `GET /api/booths/{boothId}/menus`
+- `GET /api/locations`
+- `GET /api/festival`
+- `GET /api/festival/notices`
+
+### Authenticated User
+
+- `GET /api/users/me`
+- `PATCH /api/users/me`
+- `DELETE /api/users/me`
+- `POST /api/booths/{boothId}/waitings`
+- `DELETE /api/waitings/{waitingId}`
+- `GET /api/waitings`
+
+### Booth Manager
+
+- `PATCH /api/booths/{boothId}`
+- `POST /api/booths/{boothId}/menus`
+- `PATCH /api/booths/{boothId}/menus/{menuId}`
+- `DELETE /api/booths/{boothId}/menus/{menuId}`
+- `POST /api/booths/{boothId}/menus/{menuId}/sold-out`
+- `GET /api/booths/{boothId}/waitings`
+- `POST /api/waitings/{waitingId}/call`
+- `PATCH /api/waitings/{waitingId}/status`
+- `PATCH /api/booths/{boothId}/waitings/status`
+
+### Festival Admin
+
+- `POST /api/booths`
+- `DELETE /api/booths/{boothId}`
+- `POST /api/locations`
+- `PATCH /api/locations/{locationId}`
+- `DELETE /api/locations/{locationId}`
+- `PATCH /api/festival`
+- `POST /api/festival/notices`
+
+## Scope Notes
+
+- 공연 시간표 API는 기획서에는 있지만 `API-ENDPOINTS.md`에 없으므로 v1 구현 범위에서 제외한다.
+- 공지사항 수정/삭제 API도 v1 API 문서에 없으므로 이번 구현 범위에서 제외한다.
+- 이미지 업로드 저장소 연동은 v1 도메인/API 구현 이후 별도 계획으로 분리한다.

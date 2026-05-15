@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: ${FESTI_DATABASE_URL:jdbc:postgresql://localhost:5432/festi_test}
+    username: ${FESTI_DATABASE_USERNAME:festi}
+    password: ${FESTI_DATABASE_PASSWORD:festi}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+festi:
+  jwt:
+    secret: test-secret-for-postgres-migration-validation
+    access-token-expiration: 3600

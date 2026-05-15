@@ -39,5 +39,17 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'postgres'
+    }
+}
+
+tasks.register('postgresTest', Test) {
+    description = 'Runs PostgreSQL-backed migration and schema validation tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'postgres'
+    }
 }
