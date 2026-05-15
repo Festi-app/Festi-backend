@@ -1,0 +1,2 @@
+-- Baseline migration for Festi Backend.
+-- The ERD-based tables and PostgreSQL enum types will be added in the next implementation step.
