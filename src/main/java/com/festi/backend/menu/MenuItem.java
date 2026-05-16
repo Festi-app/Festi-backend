@@ -1,7 +1,7 @@
-package com.festi.backend.domain.menu;
+package com.festi.backend.menu;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
-import com.festi.backend.domain.booth.Booth;
+import com.festi.backend.booth.Booth;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

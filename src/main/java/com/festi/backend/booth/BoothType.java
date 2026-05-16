@@ -1,4 +1,4 @@
-package com.festi.backend.domain.booth;
+package com.festi.backend.booth;
 
 public enum BoothType {
     DAY,

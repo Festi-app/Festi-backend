@@ -1,8 +1,8 @@
-package com.festi.backend.domain.location;
+package com.festi.backend.location;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
-import com.festi.backend.domain.booth.Booth;
-import com.festi.backend.domain.booth.BoothType;
+import com.festi.backend.booth.Booth;
+import com.festi.backend.booth.BoothType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

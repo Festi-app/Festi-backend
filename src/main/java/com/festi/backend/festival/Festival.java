@@ -1,4 +1,4 @@
-package com.festi.backend.domain.festival;
+package com.festi.backend.festival;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;

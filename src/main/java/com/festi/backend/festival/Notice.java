@@ -1,7 +1,7 @@
-package com.festi.backend.domain.festival;
+package com.festi.backend.festival;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
-import com.festi.backend.domain.user.User;
+import com.festi.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

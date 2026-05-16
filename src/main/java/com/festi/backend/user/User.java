@@ -1,4 +1,4 @@
-package com.festi.backend.domain.user;
+package com.festi.backend.user;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;

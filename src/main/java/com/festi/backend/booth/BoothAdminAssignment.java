@@ -1,6 +1,6 @@
-package com.festi.backend.domain.booth;
+package com.festi.backend.booth;
 
-import com.festi.backend.domain.user.User;
+import com.festi.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

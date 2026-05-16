@@ -1,4 +1,4 @@
-package com.festi.backend.domain.waiting;
+package com.festi.backend.waiting;
 
 public enum WaitingStatus {
     WAITING,

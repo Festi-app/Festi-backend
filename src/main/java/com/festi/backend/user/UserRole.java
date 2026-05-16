@@ -1,4 +1,4 @@
-package com.festi.backend.domain.user;
+package com.festi.backend.user;
 
 public enum UserRole {
     USER,
