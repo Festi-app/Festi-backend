@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
 jobs:
-  test:
+  fast-tests:
     runs-on: ubuntu-latest
     env:
       FESTI_JWT_SECRET: festi-test-action-secret-not-used-in-deployment
@@ -20,5 +20,42 @@ jobs:
           java-version: "25"
           cache: gradle
 
-      - name: Run tests
+      - name: Run fast tests
         run: ./gradlew test
+
+  postgres-migration-tests:
+    needs: fast-tests
+    runs-on: ubuntu-latest
+    env:
+      FESTI_JWT_SECRET: festi-test-action-secret-not-used-in-deployment
+      FESTI_DATABASE_URL: jdbc:postgresql://localhost:5432/festi_test
+      FESTI_DATABASE_USERNAME: festi
+      FESTI_DATABASE_PASSWORD: festi
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: festi_test
+          POSTGRES_USER: festi
+          POSTGRES_PASSWORD: festi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U festi -d festi_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+
+      - name: Run PostgreSQL migration tests
+        run: ./gradlew postgresTest

@@ -1,5 +1,8 @@
 package com.festi.backend.common.exception;
 
+import lombok.Getter;
+
+@Getter
 public class FestiException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -12,9 +15,5 @@ public class FestiException extends RuntimeException {
     public FestiException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
-    }
-
-    public ErrorCode getErrorCode() {
-        return errorCode;
     }
 }
