@@ -15,11 +15,16 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
 @Entity
 @Table(name = "booth_locations")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BoothLocation extends BaseTimeEntity {
 
     @Id
@@ -44,20 +49,11 @@ public class BoothLocation extends BaseTimeEntity {
     @Column(name = "zone_label", length = 100)
     private String zoneLabel;
 
-    protected BoothLocation() {}
-
     public BoothLocation(BoothType type, LocalDate day, String zoneLabel) {
         this.type = type;
         this.day = day;
         this.zoneLabel = zoneLabel;
     }
-
-    public Short getId() { return id; }
-    public Booth getBooth() { return booth; }
-    public BoothType getType() { return type; }
-    public Short getIndex() { return index; }
-    public LocalDate getDay() { return day; }
-    public String getZoneLabel() { return zoneLabel; }
 
     public void assignBooth(Booth booth, Short index) {
         this.booth = booth;

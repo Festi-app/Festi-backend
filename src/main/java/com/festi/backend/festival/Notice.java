@@ -12,9 +12,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
 @Entity
 @Table(name = "notices")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notice extends BaseTimeEntity {
 
     @Id
@@ -35,20 +40,12 @@ public class Notice extends BaseTimeEntity {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    protected Notice() {}
-
     public Notice(Festival festival, String title, String content, User createdBy) {
         this.festival = festival;
         this.title = title;
         this.content = content;
         this.createdBy = createdBy;
     }
-
-    public UUID getId() { return id; }
-    public Festival getFestival() { return festival; }
-    public String getTitle() { return title; }
-    public String getContent() { return content; }
-    public User getCreatedBy() { return createdBy; }
 
     public void update(String title, String content) {
         this.title = title;

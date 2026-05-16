@@ -12,9 +12,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
 @Entity
 @Table(name = "menu_items")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MenuItem extends BaseTimeEntity {
 
     @Id
@@ -43,8 +48,6 @@ public class MenuItem extends BaseTimeEntity {
     @Column(name = "sort_order", nullable = false)
     private short sortOrder = 0;
 
-    protected MenuItem() {}
-
     public MenuItem(Booth booth, String name, int price, String description,
                     String imageUrl, short sortOrder) {
         this.booth = booth;
@@ -54,15 +57,6 @@ public class MenuItem extends BaseTimeEntity {
         this.imageUrl = imageUrl;
         this.sortOrder = sortOrder;
     }
-
-    public UUID getId() { return id; }
-    public Booth getBooth() { return booth; }
-    public String getName() { return name; }
-    public int getPrice() { return price; }
-    public String getDescription() { return description; }
-    public String getImageUrl() { return imageUrl; }
-    public boolean isSoldOut() { return isSoldOut; }
-    public short getSortOrder() { return sortOrder; }
 
     public void update(String name, int price, String description, String imageUrl, short sortOrder) {
         this.name = name;

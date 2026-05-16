@@ -9,9 +9,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
 @Entity
 @Table(name = "festival")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Festival extends BaseTimeEntity {
 
     @Id
@@ -30,20 +35,12 @@ public class Festival extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    protected Festival() {}
-
     public Festival(String name, LocalDate startDate, LocalDate endDate, String description) {
         this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
         this.description = description;
     }
-
-    public UUID getId() { return id; }
-    public String getName() { return name; }
-    public LocalDate getStartDate() { return startDate; }
-    public LocalDate getEndDate() { return endDate; }
-    public String getDescription() { return description; }
 
     public void update(String name, LocalDate startDate, LocalDate endDate, String description) {
         this.name = name;

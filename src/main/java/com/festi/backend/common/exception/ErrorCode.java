@@ -1,7 +1,9 @@
 package com.festi.backend.common.exception;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+@Getter
 public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "Invalid input value."),
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "Request validation failed."),
@@ -19,11 +21,4 @@ public enum ErrorCode {
         this.message = message;
     }
 
-    public HttpStatus getStatus() {
-        return status;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }

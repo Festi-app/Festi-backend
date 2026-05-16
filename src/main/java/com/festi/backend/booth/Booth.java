@@ -14,11 +14,16 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
 @Entity
 @Table(name = "booths")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Booth extends BaseTimeEntity {
 
     @Id
@@ -61,26 +66,12 @@ public class Booth extends BaseTimeEntity {
     @Column(name = "is_waiting_open", nullable = false)
     private boolean isWaitingOpen = false;
 
-    protected Booth() {}
-
     public Booth(String name, BoothCategory category, BoothType type, User createdBy) {
         this.name = name;
         this.category = category;
         this.type = type;
         this.createdBy = createdBy;
     }
-
-    public UUID getId() { return id; }
-    public User getManager() { return manager; }
-    public User getCreatedBy() { return createdBy; }
-    public String getName() { return name; }
-    public BoothCategory getCategory() { return category; }
-    public BoothType getType() { return type; }
-    public String getDescription() { return description; }
-    public String getOperatingHours() { return operatingHours; }
-    public String getImageUrl() { return imageUrl; }
-    public boolean isActive() { return isActive; }
-    public boolean isWaitingOpen() { return isWaitingOpen; }
 
     public void update(String name, BoothCategory category, String description,
                        String operatingHours, String imageUrl) {

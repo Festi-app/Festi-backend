@@ -14,15 +14,20 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Getter
 @Entity
 @Table(
     name = "booth_admin_assignments",
     uniqueConstraints = @UniqueConstraint(columnNames = {"booth_id", "user_id"})
 )
 @EntityListeners(AuditingEntityListener.class)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BoothAdminAssignment {
 
     @Id
@@ -45,17 +50,9 @@ public class BoothAdminAssignment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    protected BoothAdminAssignment() {}
-
     public BoothAdminAssignment(Booth booth, User user, User grantedBy) {
         this.booth = booth;
         this.user = user;
         this.grantedBy = grantedBy;
     }
-
-    public UUID getId() { return id; }
-    public Booth getBooth() { return booth; }
-    public User getUser() { return user; }
-    public User getGrantedBy() { return grantedBy; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }

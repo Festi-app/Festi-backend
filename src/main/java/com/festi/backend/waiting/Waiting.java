@@ -16,15 +16,20 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Getter
 @Entity
 @Table(name = "waitings")
 @EntityListeners(AuditingEntityListener.class)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Waiting {
 
     @Id
@@ -58,22 +63,11 @@ public class Waiting {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected Waiting() {}
-
     public Waiting(Booth booth, User user, short partySize) {
         this.booth = booth;
         this.user = user;
         this.partySize = partySize;
     }
-
-    public UUID getId() { return id; }
-    public Booth getBooth() { return booth; }
-    public User getUser() { return user; }
-    public short getPartySize() { return partySize; }
-    public WaitingStatus getStatus() { return status; }
-    public short getCallCount() { return callCount; }
-    public OffsetDateTime getRegisteredAt() { return registeredAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 
     public void call() {
         this.status = WaitingStatus.CALLED;

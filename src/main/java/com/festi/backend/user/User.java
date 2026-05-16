@@ -10,11 +10,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
 @Entity
 @Table(name = "users")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
 
     @Id
@@ -38,21 +43,12 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, columnDefinition = "user_role")
     private UserRole role = UserRole.USER;
 
-    protected User() {}
-
     public User(String email, String passwordHash, String name, String phone) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.name = name;
         this.phone = phone;
     }
-
-    public UUID getId() { return id; }
-    public String getEmail() { return email; }
-    public String getPasswordHash() { return passwordHash; }
-    public String getName() { return name; }
-    public String getPhone() { return phone; }
-    public UserRole getRole() { return role; }
 
     public void updateProfile(String name, String phone) {
         this.name = name;
