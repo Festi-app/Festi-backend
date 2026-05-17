@@ -1,6 +1,7 @@
 package com.festi.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.festi.backend.user.UserRole;
 import java.time.Instant;
@@ -8,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 
 class JwtAuthenticationConverterTest {
 
@@ -32,5 +34,55 @@ class JwtAuthenticationConverterTest {
         );
         assertThat(authentication.getAuthorities())
                 .contains(new SimpleGrantedAuthority("ROLE_USER"));
+    }
+
+    @Test
+    void rejectsMissingRoleClaim() {
+        Jwt jwt = jwtBuilder()
+                .build();
+
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(InvalidBearerTokenException.class);
+    }
+
+    @Test
+    void rejectsUnknownRoleClaim() {
+        Jwt jwt = jwtBuilder()
+                .claim("role", "ADMIN")
+                .build();
+
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(InvalidBearerTokenException.class);
+    }
+
+    @Test
+    void rejectsInvalidSubjectClaim() {
+        Jwt jwt = jwtBuilder()
+                .subject("not-a-uuid")
+                .claim("role", "USER")
+                .build();
+
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(InvalidBearerTokenException.class);
+    }
+
+    @Test
+    void rejectsBlankEmailClaim() {
+        Jwt jwt = jwtBuilder()
+                .claim("email", " ")
+                .claim("role", "USER")
+                .build();
+
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(InvalidBearerTokenException.class);
+    }
+
+    private Jwt.Builder jwtBuilder() {
+        return Jwt.withTokenValue("token")
+                .header("alg", "HS256")
+                .subject(UUID.randomUUID().toString())
+                .claim("email", "user@example.com")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600));
     }
 }

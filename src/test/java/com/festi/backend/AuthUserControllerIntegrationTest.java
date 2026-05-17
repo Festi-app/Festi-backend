@@ -151,6 +151,35 @@ class AuthUserControllerIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void rejectsTokensWithMissingOrInvalidRequiredClaims() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + tokenWithClaims(
+                                userId.toString(), "user@example.com", null)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + tokenWithClaims(
+                                userId.toString(), "user@example.com", "ADMIN")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + tokenWithClaims(
+                                "not-a-uuid", "user@example.com", "USER")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + tokenWithClaims(
+                                userId.toString(), " ", "USER")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+    }
+
     private String token(UUID userId, String email, Instant expiresAt) {
         Instant issuedAt = expiresAt.isBefore(Instant.now())
                 ? expiresAt.minusSeconds(3600)
@@ -181,6 +210,18 @@ class AuthUserControllerIntegrationTest {
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
         return encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+    }
+
+    private String tokenWithClaims(String subject, String email, String role) {
+        JwtClaimsSet.Builder builder = JwtClaimsSet.builder()
+                .subject(subject)
+                .claim("email", email)
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600));
+        if (role != null) {
+            builder.claim("role", role);
+        }
+        return jwtEncoder.encode(JwtEncoderParameters.from(builder.build())).getTokenValue();
     }
 
     private User user(UUID id, String email) {
