@@ -1,17 +1,17 @@
-# Festi-Backend Implementation Plan
+  # Festi-Backend Implementation Plan
 
 ## Summary
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD를 기준으로 도메인 모델을 구성하고 JWT 기반 인증/인가를 적용한다.
 
-현재 구현은 단계별 PR로 나누어 진행한다.
+현재 `main` 브랜치는 공통 인프라와 도메인 모델 구현까지 완료된 상태이며, 다음 단계는 User/Auth/JWT 구현이다. 이후 구현도 단계별 PR로 나누어 진행한다.
 
 | Priority | Scope | Status |
 | --- | --- | --- |
 | 1 | Spring Boot/Gradle 프로젝트 생성, Java 25 설정, 테스트 워크플로우 수정 | Done |
 | 2 | 공통 설정: PostgreSQL, Flyway, JPA auditing, 공통 예외 응답, validation | Done |
-| 3 | ERD 기반 Entity, enum, Repository, migration 작성 | Next |
-| 4 | User/Auth/JWT 구현 | Pending |
+| 3 | ERD 기반 Entity, enum, Repository, migration 작성 | Done |
+| 4 | User/Auth/JWT 구현 | Next |
 | 5 | SecurityConfig와 권한 체계 적용 | Pending |
 | 6 | 공개 조회 API 구현 | Pending |
 | 7 | 축제 관리자 API 구현 | Pending |
@@ -86,20 +86,20 @@ ERD를 PostgreSQL 기준으로 구현한다. 이 단계에서는 Controller/Serv
   - `id`, `email`, `passwordHash`, `name`, `phone`, `role`, `createdAt`, `updatedAt`
   - `email` unique
 - `Booth`
-  - `id`, `managerId`, `name`, `category`, `type`, `description`, `operatingHours`, `imageUrl`, `isActive`, `isWaitingOpen`, `createdAt`, `updatedAt`
+  - `id`, `manager`, `createdBy`, `name`, `category`, `type`, `description`, `operatingHours`, `imageUrl`, `isActive`, `isWaitingOpen`, `createdAt`, `updatedAt`
 - `MenuItem`
-  - `id`, `boothId`, `name`, `price`, `description`, `imageUrl`, `isSoldOut`, `sortOrder`, `createdAt`, `updatedAt`
+  - `id`, `booth`, `name`, `price`, `description`, `imageUrl`, `isSoldOut`, `sortOrder`, `createdAt`, `updatedAt`
 - `BoothLocation`
-  - `id`, `boothId`, `type`, `mapIndex`, `day`, `zoneLabel`, `createdAt`, `updatedAt`
-  - DB column은 `index` 대신 `map_index`를 사용한다.
+  - `id`, `booth`, `type`, `index`, `day`, `zoneLabel`, `createdAt`, `updatedAt`
+  - 현재 DB column과 Repository 정렬 기준도 `index`를 사용한다.
 - `Waiting`
-  - `id`, `boothId`, `userId`, `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`
+  - `id`, `booth`, `user`, `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`
 - `BoothAdminAssignment`
-  - `id`, `boothId`, `userId`, `grantedBy`, `createdAt`
-- `FestivalInfo`
-  - `id`, `name`, `startDate`, `endDate`, `description`, `updatedAt`
-- `FestivalNotice`
-  - `id`, `title`, `content`, `createdBy`, `createdAt`, `updatedAt`
+  - `id`, `booth`, `user`, `grantedBy`, `createdAt`
+- `Festival`
+  - `id`, `name`, `startDate`, `endDate`, `description`, `createdAt`, `updatedAt`
+- `Notice`
+  - `id`, `festival`, `title`, `content`, `createdBy`, `createdAt`, `updatedAt`
 
 ### Enums
 
@@ -108,12 +108,12 @@ ERD를 PostgreSQL 기준으로 구현한다. 이 단계에서는 Controller/Serv
   - `BOOTH_MANAGER`
   - `FESTIVAL_ADMIN`
 - `BoothCategory`
-  - `FOOD`
-  - `BEVERAGE`
-  - `SNACK`
-  - `GAME`
-  - `EXHIBITION`
-  - `OTHER`
+  - `ACTIVITY`
+  - `INFO`
+  - `MARKET`
+  - `EXPERIENCE`
+  - `PROMOTION`
+  - `ALCOHOL`
 - `BoothType`
   - `DAY`
   - `NIGHT`
@@ -133,18 +133,40 @@ ERD를 PostgreSQL 기준으로 구현한다. 이 단계에서는 Controller/Serv
 - `MenuItemRepository`
   - `findByBoothIdOrderBySortOrder`
 - `BoothLocationRepository`
-  - `findByDayAndTypeOrderByMapIndex`
+  - `findByDayAndTypeOrderByIndex`
 - `WaitingRepository`
   - `findByUserId`
   - `findByBoothIdAndStatusOrderByRegisteredAt`
 - `BoothAdminAssignmentRepository`
   - 부스 관리자 권한 확인용 query
-- `FestivalInfoRepository`
-- `FestivalNoticeRepository`
+- `FestivalRepository`
+- `NoticeRepository`
+
+### Completed Deliverables
+
+- `User`, `Booth`, `MenuItem`, `BoothLocation`, `Waiting`, `BoothAdminAssignment`, `Festival`, `Notice` Entity와 관련 enum 구현
+- 8개 JPA Repository 구현
+  - `UserRepository`
+  - `BoothRepository`
+  - `MenuItemRepository`
+  - `BoothLocationRepository`
+  - `WaitingRepository`
+  - `BoothAdminAssignmentRepository`
+  - `FestivalRepository`
+  - `NoticeRepository`
+- PostgreSQL schema migration `V2__init_schema.sql`
+- Lombok 기반 Entity/Common 클래스 보일러플레이트 정리
+- 테스트를 H2 fast test(`./gradlew test`)와 PostgreSQL migration test(`./gradlew postgresTest`)로 분리
 
 ## Priority 4: User/Auth/JWT
 
-회원가입, 로그인, 본인 정보 API를 구현한다.
+회원가입, 로그인, 본인 정보 API를 구현한다. 이 단계에서는 인증 토큰을 발급할 수 있는 최소 기능을 완성하고, JWT 검증과 세부 권한 정책은 Priority 5에서 연결한다.
+
+- DTO
+  - 회원가입 요청
+  - 로그인 요청
+  - 사용자 응답
+  - 내 정보 수정 요청
 
 - `AuthController`
   - `POST /api/auth/signup`

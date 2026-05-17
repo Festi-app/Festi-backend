@@ -1,0 +1,43 @@
+package com.festi.backend.auth;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import org.junit.jupiter.api.Test;
+
+class AuthDTOTest {
+
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+    @Test
+    void acceptsValidSignupRequest() {
+        AuthDTO.SignupRequest request = new AuthDTO.SignupRequest(
+                "user@example.com", "Password1!", "nickname", "01012345678");
+
+        assertThat(validator.validate(request)).isEmpty();
+    }
+
+    @Test
+    void rejectsPasswordsThatDoNotMatchPolicy() {
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "Pass1!", "nickname", "01012345678"))).isNotEmpty();
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "password1!", "nickname", "01012345678"))).isNotEmpty();
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "PASSWORD1!", "nickname", "01012345678"))).isNotEmpty();
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "Password!", "nickname", "01012345678"))).isNotEmpty();
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "Password1", "nickname", "01012345678"))).isNotEmpty();
+    }
+
+    @Test
+    void rejectsBlankRequiredSignupFields() {
+        assertThat(validator.validate(new AuthDTO.SignupRequest(" ", "Password1!", "nickname", "01012345678"))).isNotEmpty();
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "Password1!", " ", "01012345678"))).isNotEmpty();
+        assertThat(validator.validate(new AuthDTO.SignupRequest("user@example.com", "Password1!", "nickname", " "))).isNotEmpty();
+    }
+
+    @Test
+    void rejectsInvalidSignupEmailFormat() {
+        assertThat(validator.validate(new AuthDTO.SignupRequest(
+                "not-an-email", "Password1!", "nickname", "01012345678"
+        ))).isNotEmpty();
+    }
+}

@@ -32,3 +32,7 @@ Thumbs.db
 target/
 *.pid
 *.hprof
+
+# mcp setting (this is personal)
+.cgcignore
+mcp.json
