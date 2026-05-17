@@ -16,5 +16,7 @@ spring:
 
 festi:
   jwt:
-    secret: test-secret-for-common-configuration-only
+    secret: test-secret-for-common-configuration-only-32-bytes
     access-token-expiration: 3600
+  cors:
+    allowed-origins: http://localhost:3000

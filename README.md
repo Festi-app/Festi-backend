@@ -56,8 +56,9 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 | `FESTI_DATABASE_URL` | `jdbc:postgresql://localhost:5432/festi` | PostgreSQL JDBC URL |
 | `FESTI_DATABASE_USERNAME` | `festi` | DB 사용자 이름 |
 | `FESTI_DATABASE_PASSWORD` | `festi` | DB 비밀번호 |
-| `FESTI_JWT_SECRET` | `local-dev-secret-change-me` | JWT HS256 서명 secret |
+| `FESTI_JWT_SECRET` | `local-dev-secret-change-me-at-least-32-bytes` | JWT HS256 서명 secret |
 | `FESTI_JWT_ACCESS_TOKEN_EXPIRATION` | `3600` | Access token 만료 시간, 초 단위 |
+| `FESTI_CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | 브라우저 요청을 허용할 origin 목록, 쉼표 구분 |
 
 ### Run Tests
 
@@ -94,6 +95,8 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 - DB schema는 PostgreSQL, UUID, `TIMESTAMPTZ`, enum 타입을 기준으로 Flyway migration에서 관리합니다.
 - 비밀번호는 평문 저장하지 않고 BCrypt hash로 저장합니다.
 - JWT는 `Authorization: Bearer <token>` 형식으로 전달합니다.
+- 사용자 `email`, `name`, `phone`은 필수값이며, 본인 정보 수정에서도 빈 값으로 바꿀 수 없습니다.
+- 본인 정보 수정은 `PATCH /api/users/me`에서 `email`, `name`, `phone`을 부분 수정할 수 있고, 성공 시 갱신된 사용자 정보와 새 access token을 함께 반환합니다.
 - 부스 관리자 권한은 단순 role뿐 아니라 담당 부스 여부까지 확인합니다.
 
 ## Implementation Order
@@ -101,8 +104,8 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 1. Spring Boot/Gradle 프로젝트 생성, Java 25 설정, 테스트 워크플로우 수정
 2. 공통 설정: PostgreSQL, Flyway, JPA auditing, 공통 예외 응답, validation
 3. ERD 기반 Entity, enum, Repository, migration 작성
-4. User/Auth/JWT 구현
-5. SecurityConfig와 권한 체계 적용
+4. User/Auth/JWT 및 기본 인증/인가 구현
+5. 도메인별 세부 권한 정책 적용
 6. 공개 조회 API 구현
 7. 축제 관리자 API 구현
 8. 부스 관리자 API 구현

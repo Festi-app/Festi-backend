@@ -17,5 +17,7 @@ spring:
 
 festi:
   jwt:
-    secret: test-secret-for-postgres-migration-validation
+    secret: test-secret-for-postgres-migration-validation-32-bytes
     access-token-expiration: 3600
+  cors:
+    allowed-origins: http://localhost:3000

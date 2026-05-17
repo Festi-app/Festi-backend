@@ -27,8 +27,19 @@ class PostgresMigrationApplicationTests {
             "select to_regclass('public.booth_admin_assignments') is not null",
             Boolean.class
         );
+        String phoneNullable = jdbcTemplate.queryForObject(
+            """
+            select is_nullable
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'users'
+              and column_name = 'phone'
+            """,
+            String.class
+        );
 
         assertThat(appliedMigrationCount).isGreaterThan(0);
         assertThat(boothAdminAssignmentsExists).isTrue();
+        assertThat(phoneNullable).isEqualTo("NO");
     }
 }

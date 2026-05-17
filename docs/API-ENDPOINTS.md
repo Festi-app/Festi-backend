@@ -14,9 +14,9 @@
 | --- | --- | --- | --- |
 | POST | /api/auth/signup | 회원가입 | 모두 |
 | POST | /api/auth/login | 로그인 | 모두 |
-| GET | /api/users/me | 본인 정보 조회 | 모두 |
-| PATCH | /api/users/me | 본인 정보 수정 | 모두 |
-| DELETE | /api/users/me | 탈퇴 | 모두 |
+| GET | /api/users/me | 본인 정보 조회 | 인증 사용자 |
+| PATCH | /api/users/me | 본인 정보 수정 (`email`, `name`, `phone`) | 인증 사용자 |
+| DELETE | /api/users/me | 탈퇴 | 인증 사용자 |
 
 ## booths
     
