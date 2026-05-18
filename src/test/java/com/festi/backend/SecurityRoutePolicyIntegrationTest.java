@@ -7,8 +7,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.festi.backend.booth.BoothService;
 import com.festi.backend.user.UserRole;
+import com.festi.backend.waiting.WaitingService;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -32,6 +36,12 @@ class SecurityRoutePolicyIntegrationTest {
     @Autowired
     private JwtEncoder jwtEncoder;
 
+    @MockitoBean
+    private BoothService boothService;
+
+    @MockitoBean
+    private WaitingService waitingService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -42,9 +52,32 @@ class SecurityRoutePolicyIntegrationTest {
     }
 
     @Test
-    void publicReadRoutesStayOpenWithoutAuthentication() throws Exception {
-        mockMvc.perform(get("/api/booths"))
-                .andExpect(status().isNotFound());
+    void userLevelReadRoutesRejectMissingAuthentication() throws Exception {
+        String[] routes = {
+                "/api/booths",
+                "/api/booths/" + UUID.randomUUID(),
+                "/api/booths/" + UUID.randomUUID() + "/menus",
+                "/api/locations",
+                "/api/festival",
+                "/api/festival/notices"
+        };
+
+        for (String route : routes) {
+            mockMvc.perform(get(route))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        }
+    }
+
+    @Test
+    void everyAuthenticatedRoleCanEnterUserLevelReadRoutes() throws Exception {
+        org.mockito.Mockito.when(boothService.getBooths(null, null, null)).thenReturn(List.of());
+
+        for (UserRole role : UserRole.values()) {
+            mockMvc.perform(get("/api/booths")
+                            .header("Authorization", "Bearer " + token(role)))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Test
@@ -71,7 +104,7 @@ class SecurityRoutePolicyIntegrationTest {
     void boothManagersPassBoothManagerGateButNotFestivalAdminGate() throws Exception {
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isMethodNotAllowed());
 
         mockMvc.perform(post("/api/booths")
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
@@ -83,18 +116,21 @@ class SecurityRoutePolicyIntegrationTest {
     void festivalAdminsPassFestivalAndBoothManagerGates() throws Exception {
         mockMvc.perform(post("/api/booths")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isMethodNotAllowed());
 
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isMethodNotAllowed());
     }
 
     @Test
     void anyAuthenticatedRoleCanUseGeneralUserWaitingRoutes() throws Exception {
+        org.mockito.Mockito.when(waitingService.getMyWaitings(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+
         mockMvc.perform(get("/api/waitings")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk());
     }
 
     private String token(UserRole role) {
