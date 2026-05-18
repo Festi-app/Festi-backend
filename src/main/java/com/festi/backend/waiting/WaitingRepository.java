@@ -8,5 +8,7 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
 
     List<Waiting> findByUserId(UUID userId);
 
+    List<Waiting> findByUserIdOrderByRegisteredAtDesc(UUID userId);
+
     List<Waiting> findByBoothIdAndStatusOrderByRegisteredAt(UUID boothId, WaitingStatus status);
 }

@@ -4,7 +4,7 @@
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD를 기준으로 도메인 모델을 구성하고 JWT 기반 인증/인가를 적용한다.
 
-현재 구현 기준으로 공통 인프라, 도메인 모델, User/Auth/JWT, 기본 권한 체계까지 완료된 상태다. 다음 단계는 공개 조회 API를 먼저 구현해 실제 서비스 기능을 열어가는 것이다. 이후 구현도 단계별 PR로 나누어 진행한다.
+현재 구현 기준으로 공통 인프라, 도메인 모델, User/Auth/JWT, 기본 권한 체계, 일반 사용자 이상 조회 API까지 완료된 상태다. 이후 구현도 단계별 PR로 나누어 진행한다.
 
 | Priority | Scope | Status |
 | --- | --- | --- |
@@ -13,8 +13,8 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 | 3 | ERD 기반 Entity, enum, Repository, migration 작성 | Done |
 | 4 | User/Auth/JWT 구현 | Done |
 | 5 | SecurityConfig와 권한 체계 적용 | Done |
-| 6 | 공개 조회 API 구현 | Next |
-| 7 | 축제 관리자 API 구현 | Pending |
+| 6 | 일반 사용자 이상 조회 API 구현 | Done |
+| 7 | 축제 관리자 API 구현 | Next |
 | 8 | 부스 관리자 API 구현 | Pending |
 | 9 | 웨이팅 API 구현 | Pending |
 | 10 | controller/service/repository 테스트 보강 | Pending |
@@ -225,7 +225,8 @@ Spring Security 기반 인증/인가 구조를 확정한다.
 - 인증 객체
   - JWT claim에서 user id/email/role을 읽어 custom principal로 변환
 - 접근 제어
-  - 공개 API는 `permitAll`
+  - 회원가입/로그인만 `permitAll`
+  - 일반 사용자 이상 조회 API는 `authenticated`
   - 사용자 API는 authenticated
   - 관리자 API는 role + 도메인 소유권 검증
 - 부스 관리자 권한
@@ -237,8 +238,8 @@ Spring Security 기반 인증/인가 구조를 확정한다.
 ### Completed Deliverables
 
 - `SecurityConfig`에 API Access Policy 전체 반영
-  - 공개 조회 API는 `permitAll`
-  - 본인 정보 / 일반 사용자 웨이팅 API는 `authenticated`
+  - 회원가입/로그인만 `permitAll`
+  - 일반 사용자 이상 조회 API와 본인 정보 / 일반 사용자 웨이팅 API는 `authenticated`
   - 축제 관리자 API는 `FESTIVAL_ADMIN`
   - 부스 관리자 API는 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN`
   - 문서에 정의되지 않은 라우트는 기본 `denyAll`
@@ -248,24 +249,40 @@ Spring Security 기반 인증/인가 구조를 확정한다.
   - `BOOTH_MANAGER`는 `booths.manager_id`와 현재 사용자 id가 일치할 때만 허용
   - `BoothAdminAssignmentRepository`는 v1 권한 판정에서 미사용
 - `SecurityRoutePolicyIntegrationTest`
-  - 공개 / 인증 사용자 / 부스 관리자 / 축제 관리자 coarse gate 검증
+  - 비인증 / 인증 사용자 / 부스 관리자 / 축제 관리자 coarse gate 검증
 - `BoothAuthorizationServiceTest`
   - festival admin 우회
   - 동일 manager 허용
   - 다른 manager / manager 없음 / 일반 사용자 거부
 
-## Priority 6: Public Read APIs
+## Priority 6: User-Level Read APIs
 
-인증 없이 조회 가능한 API를 먼저 구현한다.
+일반 사용자 이상이 조회할 수 있는 API를 먼저 구현한다.
 
 - `GET /api/booths`
-  - `day`, `type` filter
+  - 선택 필터: `day`, `type`, `category`
 - `GET /api/booths/{boothId}`
 - `GET /api/booths/{boothId}/menus`
 - `GET /api/locations`
-  - `day`, `type` filter
+  - 필수 필터: `day`, `type`
 - `GET /api/festival`
 - `GET /api/festival/notices`
+- `GET /api/waitings`
+
+### Completed Deliverables
+
+- 조회 전용 DTO / Service / Controller 구현
+  - `BoothDTO`, `MenuDTO`, `LocationDTO`, `FestivalDTO`, `NoticeDTO`, `WaitingDTO`
+- 조회 API 구현
+  - 부스 목록 / 상세 / 메뉴
+  - 배치도
+  - 축제 정보 / 공지사항
+  - 본인 웨이팅 목록
+- 조회 정책 반영
+  - 부스 목록은 `day`, `type`, `category` 조합 필터 지원
+  - 배치도는 `day`, `type` 필수
+  - 공지사항은 최신순, 웨이팅은 최신 등록순
+  - 목록은 빈 배열, 단건은 미존재 시 `404`
 
 ## Priority 7: Festival Admin APIs
 
@@ -326,7 +343,8 @@ Spring Security 기반 인증/인가 구조를 확정한다.
   - 로그인 성공/실패
   - JWT claim 검증
 - `SecurityConfigTest`
-  - public endpoint 접근
+  - signup/login 공개 접근
+  - user-level read endpoint 401
   - 인증 필요 endpoint 401
   - 권한 부족 403
 - `BoothServiceTest`
@@ -358,15 +376,15 @@ CI acceptance 기준은 `./gradlew test` 통과다.
 
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
+
+### Authenticated User
+
 - `GET /api/booths`
 - `GET /api/booths/{boothId}`
 - `GET /api/booths/{boothId}/menus`
 - `GET /api/locations`
 - `GET /api/festival`
 - `GET /api/festival/notices`
-
-### Authenticated User
-
 - `GET /api/users/me`
 - `PATCH /api/users/me`
 - `DELETE /api/users/me`

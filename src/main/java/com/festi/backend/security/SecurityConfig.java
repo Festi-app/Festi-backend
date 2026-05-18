@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 "/api/locations",
                                 "/api/festival",
                                 "/api/festival/notices"
-                        ).permitAll()
+                        ).authenticated()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/booths/*/waitings").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/waitings/*").authenticated()

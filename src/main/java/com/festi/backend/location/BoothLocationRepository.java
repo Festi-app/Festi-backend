@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BoothLocationRepository extends JpaRepository<BoothLocation, Short> {
 
     List<BoothLocation> findByDayAndTypeOrderByIndex(LocalDate day, BoothType type);
+
+    List<BoothLocation> findByDayOrderByIndex(LocalDate day);
 }
