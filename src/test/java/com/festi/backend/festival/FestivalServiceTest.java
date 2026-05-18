@@ -34,11 +34,12 @@ class FestivalServiceTest {
     }
 
     @Test
-    void readsSingleFestivalAndLatestNotices() {
+    void readsFirstFestivalAndLatestNotices() {
         Festival festival = festival(UUID.randomUUID());
+        Festival ignoredFestival = festival(UUID.randomUUID());
         Notice latest = notice(festival, "latest", OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC));
         Notice older = notice(festival, "older", OffsetDateTime.of(2026, 5, 17, 10, 0, 0, 0, ZoneOffset.UTC));
-        when(festivalRepository.findAll()).thenReturn(List.of(festival));
+        when(festivalRepository.findAll()).thenReturn(List.of(festival, ignoredFestival));
         when(noticeRepository.findByFestivalIdOrderByCreatedAtDesc(festival.getId()))
                 .thenReturn(List.of(latest, older));
 

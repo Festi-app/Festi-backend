@@ -29,8 +29,10 @@ public class FestivalService {
     }
 
     private Festival findSingleFestival() {
-        return festivalRepository.findAll().stream()
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException("Festival not found."));
+        List<Festival> festivals = festivalRepository.findAll();
+        if (festivals.isEmpty()) {
+            throw new NotFoundException("Festival not found.");
+        }
+        return festivals.getFirst();
     }
 }
