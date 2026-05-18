@@ -4,16 +4,16 @@
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD를 기준으로 도메인 모델을 구성하고 JWT 기반 인증/인가를 적용한다.
 
-현재 `main` 브랜치는 공통 인프라와 도메인 모델 구현까지 완료된 상태이며, 다음 단계는 User/Auth/JWT 구현이다. 이후 구현도 단계별 PR로 나누어 진행한다.
+현재 구현 기준으로 공통 인프라, 도메인 모델, User/Auth/JWT, 기본 권한 체계까지 완료된 상태다. 다음 단계는 공개 조회 API를 먼저 구현해 실제 서비스 기능을 열어가는 것이다. 이후 구현도 단계별 PR로 나누어 진행한다.
 
 | Priority | Scope | Status |
 | --- | --- | --- |
 | 1 | Spring Boot/Gradle 프로젝트 생성, Java 25 설정, 테스트 워크플로우 수정 | Done |
 | 2 | 공통 설정: PostgreSQL, Flyway, JPA auditing, 공통 예외 응답, validation | Done |
 | 3 | ERD 기반 Entity, enum, Repository, migration 작성 | Done |
-| 4 | User/Auth/JWT 구현 | Next |
-| 5 | SecurityConfig와 권한 체계 적용 | Pending |
-| 6 | 공개 조회 API 구현 | Pending |
+| 4 | User/Auth/JWT 구현 | Done |
+| 5 | SecurityConfig와 권한 체계 적용 | Done |
+| 6 | 공개 조회 API 구현 | Next |
 | 7 | 축제 관리자 API 구현 | Pending |
 | 8 | 부스 관리자 API 구현 | Pending |
 | 9 | 웨이팅 API 구현 | Pending |
@@ -189,6 +189,30 @@ ERD를 PostgreSQL 기준으로 구현한다. 이 단계에서는 Controller/Serv
   - `FESTI_JWT_SECRET`
 - refresh token은 v1 범위에서 제외한다.
 
+### Completed Deliverables
+
+- `AuthDTO`, `UserDTO` 구현
+- `AuthController`
+  - `POST /api/auth/signup`
+  - `POST /api/auth/login`
+- `UserController`
+  - `GET /api/users/me`
+  - `PATCH /api/users/me`
+  - `DELETE /api/users/me`
+- `AuthService`, `UserService` 구현
+  - 회원가입 시 기본 role `USER`
+  - BCrypt 기반 비밀번호 저장
+  - 이메일 변경 시 fresh access token 재발급
+- JWT 발급/변환 계층 구현
+  - `JwtTokenService`
+  - `HmacJwtTokenService`
+  - `JwtProperties`
+  - `AuthenticatedUser`
+  - `AuthenticatedUserAuthenticationToken`
+  - `JwtAuthenticationConverter`
+- 사용자 스키마 보강 migration `V3__users_phone_not_null.sql`
+- DTO / service / JWT converter / JWT issuance / security exception handler 테스트 추가
+
 ## Priority 5: Security and Authorization
 
 Spring Security 기반 인증/인가 구조를 확정한다.
@@ -206,8 +230,29 @@ Spring Security 기반 인증/인가 구조를 확정한다.
   - 관리자 API는 role + 도메인 소유권 검증
 - 부스 관리자 권한
   - 단순 role만 보지 않는다.
-  - `BoothAdminAssignment` 또는 `booths.managerId` 기준으로 해당 부스 담당자인지 확인한다.
+  - v1에서는 `booths.managerId`만 기준으로 해당 부스 담당자인지 확인한다.
+  - `BoothAdminAssignment`는 현재 schema에 남아 있지만, v1 인증/인가 경로에서는 사용하지 않는다.
   - `FESTIVAL_ADMIN`은 부스 관리자 권한도 통과한다.
+
+### Completed Deliverables
+
+- `SecurityConfig`에 API Access Policy 전체 반영
+  - 공개 조회 API는 `permitAll`
+  - 본인 정보 / 일반 사용자 웨이팅 API는 `authenticated`
+  - 축제 관리자 API는 `FESTIVAL_ADMIN`
+  - 부스 관리자 API는 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN`
+  - 문서에 정의되지 않은 라우트는 기본 `denyAll`
+- `BoothAuthorizationService`
+  - `AuthenticatedUser`와 `Booth` 엔티티를 기준으로 부스 소유권 검증
+  - `FESTIVAL_ADMIN` 우회 허용
+  - `BOOTH_MANAGER`는 `booths.manager_id`와 현재 사용자 id가 일치할 때만 허용
+  - `BoothAdminAssignmentRepository`는 v1 권한 판정에서 미사용
+- `SecurityRoutePolicyIntegrationTest`
+  - 공개 / 인증 사용자 / 부스 관리자 / 축제 관리자 coarse gate 검증
+- `BoothAuthorizationServiceTest`
+  - festival admin 우회
+  - 동일 manager 허용
+  - 다른 manager / manager 없음 / 일반 사용자 거부
 
 ## Priority 6: Public Read APIs
 
@@ -356,3 +401,4 @@ CI acceptance 기준은 `./gradlew test` 통과다.
 - 공연 시간표 API는 기획서에는 있지만 `API-ENDPOINTS.md`에 없으므로 v1 구현 범위에서 제외한다.
 - 공지사항 수정/삭제 API도 v1 API 문서에 없으므로 이번 구현 범위에서 제외한다.
 - 이미지 업로드 저장소 연동은 v1 도메인/API 구현 이후 별도 계획으로 분리한다.
+- v1 부스 관리자 권한은 `booths.manager_id` 단일 계정만 기준으로 판단한다. `BoothAdminAssignment`는 schema에 남겨두되, 다중 관리자 요구가 생기기 전까지 권한 판정에서는 제외한다.

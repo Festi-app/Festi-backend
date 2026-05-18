@@ -51,8 +51,45 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/booths",
+                                "/api/booths/*",
+                                "/api/booths/*/menus",
+                                "/api/locations",
+                                "/api/festival",
+                                "/api/festival/notices"
+                        ).permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
-                        .anyRequest().permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/booths/*/waitings").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/waitings/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/waitings").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/booths").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/booths/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/locations").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/locations/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/locations/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/festival").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/festival/notices").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/booths/*")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/booths/*/menus")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/booths/*/menus/*")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/booths/*/menus/*")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/booths/*/menus/*/sold-out")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/booths/*/waitings")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/waitings/*/call")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/waitings/*/status")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/booths/*/waitings/status")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .anyRequest().denyAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
