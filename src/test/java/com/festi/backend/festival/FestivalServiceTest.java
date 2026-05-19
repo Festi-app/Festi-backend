@@ -34,20 +34,24 @@ class FestivalServiceTest {
     }
 
     @Test
-    void readsFirstFestivalAndLatestNotices() {
+    void readsFirstFestivalAndPinnedThenLatestNotices() {
         Festival festival = festival(UUID.randomUUID());
         Festival ignoredFestival = festival(UUID.randomUUID());
-        Notice latest = notice(festival, "latest", OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC));
-        Notice older = notice(festival, "older", OffsetDateTime.of(2026, 5, 17, 10, 0, 0, 0, ZoneOffset.UTC));
+        Notice pinned = notice(festival, "pinned", true, OffsetDateTime.of(2026, 5, 17, 10, 0, 0, 0, ZoneOffset.UTC));
+        Notice latest = notice(festival, "latest", false, OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC));
+        Notice older = notice(festival, "older", false, OffsetDateTime.of(2026, 5, 17, 10, 0, 0, 0, ZoneOffset.UTC));
         when(festivalRepository.findAll()).thenReturn(List.of(festival, ignoredFestival));
-        when(noticeRepository.findByFestivalIdOrderByCreatedAtDesc(festival.getId()))
-                .thenReturn(List.of(latest, older));
+        when(noticeRepository.findByFestivalIdOrderByPinnedDescCreatedAtDesc(festival.getId()))
+                .thenReturn(List.of(pinned, latest, older));
 
         FestivalDTO.Response festivalResponse = festivalService.getFestival();
         List<NoticeDTO.Response> noticeResponses = festivalService.getNotices();
 
         assertThat(festivalResponse.name()).isEqualTo("Festi");
-        assertThat(noticeResponses).extracting(NoticeDTO.Response::title).containsExactly("latest", "older");
+        assertThat(noticeResponses).extracting(NoticeDTO.Response::title)
+                .containsExactly("pinned", "latest", "older");
+        assertThat(noticeResponses.get(0).pinned()).isTrue();
+        assertThat(noticeResponses.get(1).pinned()).isFalse();
     }
 
     @Test
@@ -66,8 +70,8 @@ class FestivalServiceTest {
         return festival;
     }
 
-    private Notice notice(Festival festival, String title, OffsetDateTime createdAt) {
-        Notice notice = new Notice(festival, title, "content", null);
+    private Notice notice(Festival festival, String title, boolean pinned, OffsetDateTime createdAt) {
+        Notice notice = new Notice(festival, title, "content", pinned, null);
         ReflectionTestUtils.setField(notice, "createdAt", createdAt);
         return notice;
     }

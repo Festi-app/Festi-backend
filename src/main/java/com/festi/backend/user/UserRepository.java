@@ -3,10 +3,14 @@ package com.festi.backend.user;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UserPK> {
 
-    Optional<User> findByEmail(String email);
+    @Query("SELECT u FROM User u WHERE u.pk.id = :id AND u.pk.festivalId = :festivalId")
+    Optional<User> findByIdAndFestivalId(@Param("id") String id, @Param("festivalId") UUID festivalId);
 
-    boolean existsByEmail(String email);
+    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.pk.id = :id AND u.pk.festivalId = :festivalId")
+    boolean existsByIdAndFestivalId(@Param("id") String id, @Param("festivalId") UUID festivalId);
 }

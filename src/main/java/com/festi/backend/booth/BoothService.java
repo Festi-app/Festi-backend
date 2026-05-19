@@ -27,13 +27,13 @@ public class BoothService {
         if (day != null) {
             return getPlacedBooths(day, type, category);
         }
-        return getActiveBooths(type, category).stream()
+        return getBooths(type, category).stream()
                 .map(BoothDTO.Summary::from)
                 .toList();
     }
 
     public BoothDTO.Detail getBooth(UUID boothId) {
-        Booth booth = boothRepository.findByIdAndIsActiveTrue(boothId)
+        Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         return BoothDTO.Detail.from(booth);
     }
@@ -46,7 +46,7 @@ public class BoothService {
         Map<UUID, Booth> uniqueBooths = new LinkedHashMap<>();
         for (BoothLocation location : locations) {
             Booth booth = location.getBooth();
-            if (booth == null || !booth.isActive()) {
+            if (booth == null) {
                 continue;
             }
             if (type != null && booth.getType() != type) {
@@ -63,16 +63,16 @@ public class BoothService {
                 .toList();
     }
 
-    private List<Booth> getActiveBooths(BoothType type, BoothCategory category) {
+    private List<Booth> getBooths(BoothType type, BoothCategory category) {
         if (type != null && category != null) {
-            return boothRepository.findByTypeAndCategoryAndIsActiveTrue(type, category);
+            return boothRepository.findByTypeAndCategory(type, category);
         }
         if (type != null) {
-            return boothRepository.findByTypeAndIsActiveTrue(type);
+            return boothRepository.findByType(type);
         }
         if (category != null) {
-            return boothRepository.findByCategoryAndIsActiveTrue(category);
+            return boothRepository.findByCategory(category);
         }
-        return boothRepository.findByIsActiveTrue();
+        return boothRepository.findAll();
     }
 }

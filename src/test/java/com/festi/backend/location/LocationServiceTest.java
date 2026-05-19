@@ -6,9 +6,10 @@ import static org.mockito.Mockito.when;
 import com.festi.backend.booth.Booth;
 import com.festi.backend.booth.BoothCategory;
 import com.festi.backend.booth.BoothType;
-import com.festi.backend.user.User;
+import com.festi.backend.festival.Festival;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,18 +25,21 @@ class LocationServiceTest {
 
     private LocationService locationService;
 
+    private Festival festival;
+
     @BeforeEach
     void setUp() {
         locationService = new LocationService(boothLocationRepository);
+        festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
+        ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
     }
 
     @Test
     void returnsPlacedAndUnplacedLocationsInIndexOrder() {
         LocalDate day = LocalDate.of(2026, 5, 20);
-        Booth booth = new Booth("booth", BoothCategory.INFO, BoothType.DAY,
-                new User("creator@example.com", "hash", "creator", "01012345678"));
-        BoothLocation first = new BoothLocation(BoothType.DAY, day, "A");
-        BoothLocation second = new BoothLocation(BoothType.DAY, day, "B");
+        Booth booth = new Booth("booth", BoothCategory.INFO, BoothType.DAY, "creator");
+        BoothLocation first = new BoothLocation(festival, BoothType.DAY, day, "A");
+        BoothLocation second = new BoothLocation(festival, BoothType.DAY, day, "B");
         first.assignBooth(booth, (short) 1);
         ReflectionTestUtils.setField(first, "id", (short) 1);
         ReflectionTestUtils.setField(second, "id", (short) 2);

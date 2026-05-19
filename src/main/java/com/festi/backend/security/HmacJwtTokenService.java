@@ -27,8 +27,8 @@ public class HmacJwtTokenService implements JwtTokenService {
         Instant issuedAt = clock.instant();
         Instant expiresAt = issuedAt.plusSeconds(jwtProperties.accessTokenExpiration());
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(user.getId().toString())
-                .claim("email", user.getEmail())
+                .subject(user.getId())
+                .claim("festivalId", user.getFestivalId().toString())
                 .claim("role", user.getRole().name())
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
