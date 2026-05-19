@@ -17,11 +17,11 @@ class JwtAuthenticationConverterTest {
 
     @Test
     void convertsClaimsIntoAuthenticatedUserAndRoleAuthority() {
-        UUID userId = UUID.randomUUID();
+        UUID festivalId = UUID.randomUUID();
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "HS256")
-                .subject(userId.toString())
-                .claim("email", "user@example.com")
+                .subject("alice123")
+                .claim("festivalId", festivalId.toString())
                 .claim("role", "USER")
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))
@@ -30,7 +30,7 @@ class JwtAuthenticationConverterTest {
         AuthenticatedUserAuthenticationToken authentication = converter.convert(jwt);
 
         assertThat(authentication.getPrincipal()).isEqualTo(
-                new AuthenticatedUser(userId, "user@example.com", UserRole.USER)
+                new AuthenticatedUser("alice123", festivalId, UserRole.USER)
         );
         assertThat(authentication.getAuthorities())
                 .contains(new SimpleGrantedAuthority("ROLE_USER"));
@@ -38,8 +38,7 @@ class JwtAuthenticationConverterTest {
 
     @Test
     void rejectsMissingRoleClaim() {
-        Jwt jwt = jwtBuilder()
-                .build();
+        Jwt jwt = jwtBuilder().build();
 
         assertThatThrownBy(() -> converter.convert(jwt))
                 .isInstanceOf(InvalidBearerTokenException.class);
@@ -56,10 +55,14 @@ class JwtAuthenticationConverterTest {
     }
 
     @Test
-    void rejectsInvalidSubjectClaim() {
-        Jwt jwt = jwtBuilder()
-                .subject("not-a-uuid")
+    void rejectsBlankSubjectClaim() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "HS256")
+                .subject(" ")
+                .claim("festivalId", UUID.randomUUID().toString())
                 .claim("role", "USER")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
 
         assertThatThrownBy(() -> converter.convert(jwt))
@@ -67,10 +70,28 @@ class JwtAuthenticationConverterTest {
     }
 
     @Test
-    void rejectsBlankEmailClaim() {
-        Jwt jwt = jwtBuilder()
-                .claim("email", " ")
+    void rejectsMissingFestivalIdClaim() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "HS256")
+                .subject("alice123")
                 .claim("role", "USER")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .build();
+
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(InvalidBearerTokenException.class);
+    }
+
+    @Test
+    void rejectsInvalidFestivalIdClaim() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "HS256")
+                .subject("alice123")
+                .claim("festivalId", "not-a-uuid")
+                .claim("role", "USER")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
 
         assertThatThrownBy(() -> converter.convert(jwt))
@@ -80,8 +101,8 @@ class JwtAuthenticationConverterTest {
     private Jwt.Builder jwtBuilder() {
         return Jwt.withTokenValue("token")
                 .header("alg", "HS256")
-                .subject(UUID.randomUUID().toString())
-                .claim("email", "user@example.com")
+                .subject("alice123")
+                .claim("festivalId", UUID.randomUUID().toString())
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600));
     }

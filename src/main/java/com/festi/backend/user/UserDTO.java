@@ -1,11 +1,8 @@
 package com.festi.backend.user;
 
-import com.festi.backend.auth.AuthDTO;
 import jakarta.validation.constraints.AssertTrue;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import java.util.UUID;
 
 public final class UserDTO {
 
@@ -13,8 +10,7 @@ public final class UserDTO {
     }
 
     public record Response(
-            UUID id,
-            String email,
+            String id,
             String name,
             String phone,
             UserRole role
@@ -22,7 +18,6 @@ public final class UserDTO {
         public static Response from(User user) {
             return new Response(
                     user.getId(),
-                    user.getEmail(),
                     user.getName(),
                     user.getPhone(),
                     user.getRole()
@@ -31,11 +26,6 @@ public final class UserDTO {
     }
 
     public record UpdateRequest(
-            @Email
-            @Size(max = 255)
-            @Pattern(regexp = ".*\\S.*", message = "Email must not be blank.")
-            String email,
-
             @Size(max = 100)
             @Pattern(regexp = ".*\\S.*", message = "Name must not be blank.")
             String name,
@@ -46,13 +36,7 @@ public final class UserDTO {
     ) {
         @AssertTrue(message = "At least one field must be provided.")
         public boolean hasAnyField() {
-            return email != null || name != null || phone != null;
+            return name != null || phone != null;
         }
-    }
-
-    public record UpdateResponse(
-            Response user,
-            AuthDTO.TokenResponse token
-    ) {
     }
 }

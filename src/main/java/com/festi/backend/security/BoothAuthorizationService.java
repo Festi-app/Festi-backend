@@ -1,7 +1,6 @@
 package com.festi.backend.security;
 
 import com.festi.backend.booth.Booth;
-import com.festi.backend.user.User;
 import com.festi.backend.user.UserRole;
 import java.util.Objects;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,10 +14,10 @@ public class BoothAuthorizationService {
             return;
         }
 
-        User manager = booth.getManager();
+        String managerId = booth.getManagerId();
         if (currentUser.role() != UserRole.BOOTH_MANAGER
-                || manager == null
-                || !Objects.equals(manager.getId(), currentUser.id())) {
+                || managerId == null
+                || !Objects.equals(managerId, currentUser.id())) {
             throw new AccessDeniedException("Access is denied.");
         }
     }

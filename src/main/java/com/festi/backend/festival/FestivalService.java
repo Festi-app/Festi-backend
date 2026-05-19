@@ -23,7 +23,7 @@ public class FestivalService {
 
     public List<NoticeDTO.Response> getNotices() {
         Festival festival = findSingleFestival();
-        return noticeRepository.findByFestivalIdOrderByCreatedAtDesc(festival.getId()).stream()
+        return noticeRepository.findByFestivalIdOrderByPinnedDescCreatedAtDesc(festival.getId()).stream()
                 .map(NoticeDTO.Response::from)
                 .toList();
     }

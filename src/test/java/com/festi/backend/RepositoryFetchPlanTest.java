@@ -32,7 +32,8 @@ class RepositoryFetchPlanTest {
     @Test
     void waitingReadQueryFetchesBoothWithTheRootQuery() throws NoSuchMethodException {
         Method method = WaitingRepository.class.getMethod(
-                "findByUserIdOrderByRegisteredAtDesc",
+                "findByUserIdAndFestivalIdOrderByRegisteredAtDesc",
+                String.class,
                 UUID.class
         );
 

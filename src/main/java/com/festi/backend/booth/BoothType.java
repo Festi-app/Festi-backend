@@ -2,5 +2,6 @@ package com.festi.backend.booth;
 
 public enum BoothType {
     DAY,
-    NIGHT
+    NIGHT,
+    FOOD_TRUCK
 }

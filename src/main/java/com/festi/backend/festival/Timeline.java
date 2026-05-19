@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,9 +19,9 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "notices")
+@Table(name = "timelines")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Notice extends BaseTimeEntity {
+public class Timeline extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -29,29 +31,35 @@ public class Notice extends BaseTimeEntity {
     @JoinColumn(name = "festival_id", nullable = false)
     private Festival festival;
 
+    @Column(nullable = false)
+    private LocalDate day;
+
     @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String content;
+    @Column(nullable = false, length = 200)
+    private String artist;
 
-    @Column(name = "pinned", nullable = false)
-    private boolean pinned = false;
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
 
-    @Column(name = "created_by_id", length = 30)
-    private String createdById;
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
 
-    public Notice(Festival festival, String title, String content, boolean pinned, String createdById) {
+    public Timeline(Festival festival, LocalDate day, String title, String artist,
+                    LocalTime startTime, LocalTime endTime) {
         this.festival = festival;
+        this.day = day;
         this.title = title;
-        this.content = content;
-        this.pinned = pinned;
-        this.createdById = createdById;
+        this.artist = artist;
+        this.startTime = startTime;
+        this.endTime = endTime;
     }
 
-    public void update(String title, String content, boolean pinned) {
+    public void update(String title, String artist, LocalTime startTime, LocalTime endTime) {
         this.title = title;
-        this.content = content;
-        this.pinned = pinned;
+        this.artist = artist;
+        this.startTime = startTime;
+        this.endTime = endTime;
     }
 }

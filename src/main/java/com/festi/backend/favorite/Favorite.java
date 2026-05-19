@@ -1,5 +1,7 @@
-package com.festi.backend.booth;
+package com.festi.backend.favorite;
 
+import com.festi.backend.booth.Booth;
+import com.festi.backend.festival.Festival;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -22,34 +24,35 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Getter
 @Entity
 @Table(
-        name = "booth_admin_assignments",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"booth_id", "user_id"})
+        name = "favorites",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"festival_id", "user_id", "booth_id"})
 )
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class BoothAdminAssignment {
+public class Favorite {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booth_id", nullable = false)
-    private Booth booth;
+    @JoinColumn(name = "festival_id", nullable = false)
+    private Festival festival;
 
     @Column(name = "user_id", nullable = false, length = 30)
     private String userId;
 
-    @Column(name = "granted_by_id", nullable = false, length = 30)
-    private String grantedById;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booth_id", nullable = false)
+    private Booth booth;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    public BoothAdminAssignment(Booth booth, String userId, String grantedById) {
-        this.booth = booth;
+    public Favorite(Festival festival, String userId, Booth booth) {
+        this.festival = festival;
         this.userId = userId;
-        this.grantedById = grantedById;
+        this.booth = booth;
     }
 }
