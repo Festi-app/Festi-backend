@@ -3,10 +3,10 @@ package com.festi.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.festi.backend.booth.BoothType;
+import com.festi.backend.festival.FestivalDay;
 import com.festi.backend.location.BoothLocationRepository;
 import com.festi.backend.waiting.WaitingRepository;
 import java.lang.reflect.Method;
-import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -17,12 +17,12 @@ class RepositoryFetchPlanTest {
     void boothLocationReadQueriesFetchBoothWithTheRootQuery() throws NoSuchMethodException {
         Method byDayAndType = BoothLocationRepository.class.getMethod(
                 "findByDayAndTypeOrderByIndex",
-                LocalDate.class,
+                FestivalDay.class,
                 BoothType.class
         );
         Method byDay = BoothLocationRepository.class.getMethod(
                 "findByDayOrderByIndex",
-                LocalDate.class
+                FestivalDay.class
         );
 
         assertFetchesBooth(byDayAndType);

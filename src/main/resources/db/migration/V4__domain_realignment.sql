@@ -40,12 +40,6 @@ ALTER TABLE waitings ALTER COLUMN user_id DROP DEFAULT;
 ALTER TABLE waitings ADD CONSTRAINT waitings_user_fk
     FOREIGN KEY (festival_id, user_id) REFERENCES users(festival_id, id) ON DELETE CASCADE;
 
--- Rebuild booth_locations: add festival_id, add unique constraint
-ALTER TABLE booth_locations ADD COLUMN festival_id UUID REFERENCES festival(id) ON DELETE CASCADE;
-ALTER TABLE booth_locations ALTER COLUMN festival_id SET NOT NULL;
-ALTER TABLE booth_locations ADD CONSTRAINT uq_booth_locations_festival_zone_index_day
-    UNIQUE (festival_id, zone_label, index, day);
-
 -- Add pinned to notices
 ALTER TABLE notices ADD COLUMN pinned BOOLEAN NOT NULL DEFAULT FALSE;
 -- Drop notices.created_by (replaced by no tracking field)
@@ -53,19 +47,28 @@ ALTER TABLE notices DROP COLUMN created_by;
 
 -- New tables
 
--- FestivalDay
+-- FestivalDay (created before booth_locations references it)
 CREATE TABLE festival_days (
-    id         UUID        PRIMARY KEY,
-    festival_id UUID       NOT NULL REFERENCES festival(id) ON DELETE CASCADE,
-    day        DATE        NOT NULL,
-    day_start  TIME,
-    day_end    TIME,
+    id          UUID        PRIMARY KEY,
+    festival_id UUID        NOT NULL REFERENCES festival(id) ON DELETE CASCADE,
+    day         DATE        NOT NULL,
+    day_start   TIME,
+    day_end     TIME,
     night_start TIME,
     night_end   TIME,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL,
     UNIQUE (festival_id, day)
 );
+
+-- Rebuild booth_locations: add festival_id, replace day DATE with festival_day_id FK to festival_days
+ALTER TABLE booth_locations ADD COLUMN festival_id UUID REFERENCES festival(id) ON DELETE CASCADE;
+ALTER TABLE booth_locations ALTER COLUMN festival_id SET NOT NULL;
+ALTER TABLE booth_locations DROP COLUMN day;
+ALTER TABLE booth_locations ADD COLUMN festival_day_id UUID REFERENCES festival_days(id) ON DELETE CASCADE;
+ALTER TABLE booth_locations ALTER COLUMN festival_day_id SET NOT NULL;
+ALTER TABLE booth_locations ADD CONSTRAINT uq_booth_locations_festival_zone_index_day
+    UNIQUE (festival_id, zone_label, index, festival_day_id);
 
 -- Timeline
 CREATE TABLE timelines (
@@ -118,6 +121,6 @@ CREATE INDEX idx_festival_days_festival_id ON festival_days(festival_id);
 CREATE INDEX idx_timelines_festival_id_day ON timelines(festival_id, day);
 CREATE INDEX idx_booth_applications_festival_id ON booth_applications(festival_id);
 CREATE INDEX idx_favorites_user ON favorites(festival_id, user_id);
-CREATE INDEX idx_booth_locations_festival_day_type ON booth_locations(festival_id, day, type);
+CREATE INDEX idx_booth_locations_festival_day_type ON booth_locations(festival_id, festival_day_id, type);
 CREATE INDEX idx_waitings_user ON waitings(festival_id, user_id);
 -- Note: booth_admin_assignments table was dropped; no index needed

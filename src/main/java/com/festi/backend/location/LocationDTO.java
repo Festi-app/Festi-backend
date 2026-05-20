@@ -22,7 +22,7 @@ public final class LocationDTO {
                     location.getId(),
                     location.getType(),
                     location.getIndex(),
-                    location.getDay(),
+                    location.getDay().getDay(),
                     location.getZoneLabel(),
                     location.getBooth() == null ? null : BoothDTO.Summary.from(location.getBooth())
             );
