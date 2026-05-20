@@ -8,6 +8,7 @@ import com.festi.backend.security.JwtTokenService;
 import com.festi.backend.user.User;
 import com.festi.backend.user.UserRepository;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,24 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final FestivalRepository festivalRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
-
-    public AuthService(
-            UserRepository userRepository,
-            FestivalRepository festivalRepository,
-            PasswordEncoder passwordEncoder,
-            JwtTokenService jwtTokenService
-    ) {
-        this.userRepository = userRepository;
-        this.festivalRepository = festivalRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenService = jwtTokenService;
-    }
 
     public User signup(AuthDTO.SignupRequest request) {
         Festival festival = detectFestival();
