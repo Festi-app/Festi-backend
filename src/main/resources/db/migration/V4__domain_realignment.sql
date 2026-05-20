@@ -1,5 +1,6 @@
 -- Truncate all data (dev environment only — migrate data separately in production)
 TRUNCATE TABLE booth_admin_assignments, waitings, booth_locations, menu_items, notices, booths, users RESTART IDENTITY CASCADE;
+-- booth_admin_assignments is dropped below; remaining tables are restructured in place
 
 -- Drop old enum types and add FOOD_TRUCK to booth_type
 ALTER TYPE booth_type ADD VALUE IF NOT EXISTS 'FOOD_TRUCK';
@@ -8,9 +9,10 @@ ALTER TYPE booth_type ADD VALUE IF NOT EXISTS 'FOOD_TRUCK';
 ALTER TABLE waitings DROP CONSTRAINT waitings_user_id_fkey;
 ALTER TABLE booths DROP CONSTRAINT booths_manager_id_fkey;
 ALTER TABLE booths DROP CONSTRAINT booths_created_by_fkey;
-ALTER TABLE booth_admin_assignments DROP CONSTRAINT booth_admin_assignments_user_id_fkey;
-ALTER TABLE booth_admin_assignments DROP CONSTRAINT booth_admin_assignments_granted_by_fkey;
 ALTER TABLE notices DROP CONSTRAINT IF EXISTS notices_created_by_fkey;
+
+-- Drop booth_admin_assignments (replaced by plain string fields on booths)
+DROP TABLE booth_admin_assignments;
 
 -- Rebuild users table with composite PK (festival_id + id)
 ALTER TABLE users DROP CONSTRAINT users_pkey;
@@ -42,14 +44,6 @@ ALTER TABLE booth_locations ADD COLUMN festival_id UUID REFERENCES festival(id) 
 ALTER TABLE booth_locations ALTER COLUMN festival_id SET NOT NULL;
 ALTER TABLE booth_locations ADD CONSTRAINT uq_booth_locations_festival_zone_index_day
     UNIQUE (festival_id, zone_label, index, day);
-
--- Rebuild booth_admin_assignments: change user FKs to plain strings
-ALTER TABLE booth_admin_assignments DROP COLUMN user_id;
-ALTER TABLE booth_admin_assignments DROP COLUMN granted_by;
-ALTER TABLE booth_admin_assignments ADD COLUMN user_id VARCHAR(30) NOT NULL DEFAULT '';
-ALTER TABLE booth_admin_assignments ADD COLUMN granted_by_id VARCHAR(30) NOT NULL DEFAULT '';
-ALTER TABLE booth_admin_assignments ALTER COLUMN user_id DROP DEFAULT;
-ALTER TABLE booth_admin_assignments ALTER COLUMN granted_by_id DROP DEFAULT;
 
 -- Add pinned to notices
 ALTER TABLE notices ADD COLUMN pinned BOOLEAN NOT NULL DEFAULT FALSE;
@@ -126,3 +120,4 @@ CREATE INDEX idx_booth_applications_festival_id ON booth_applications(festival_i
 CREATE INDEX idx_favorites_user ON favorites(festival_id, user_id);
 CREATE INDEX idx_booth_locations_festival_day_type ON booth_locations(festival_id, day, type);
 CREATE INDEX idx_waitings_user ON waitings(user_festival_id, user_id);
+-- Note: booth_admin_assignments table was dropped; no index needed
