@@ -23,11 +23,14 @@ ALTER TABLE users ADD COLUMN festival_id UUID NOT NULL REFERENCES festival(id) O
 ALTER TABLE users ADD PRIMARY KEY (festival_id, id);
 ALTER TABLE users ALTER COLUMN id DROP DEFAULT;
 
--- Rebuild booths: remove is_active, change FK columns to plain strings
+-- Rebuild booths: remove is_active, restore manager as composite FK to users
 ALTER TABLE booths DROP COLUMN is_active;
 ALTER TABLE booths DROP COLUMN manager_id;
 ALTER TABLE booths DROP COLUMN created_by;
+ALTER TABLE booths ADD COLUMN manager_festival_id UUID REFERENCES festival(id) ON DELETE SET NULL;
 ALTER TABLE booths ADD COLUMN manager_id VARCHAR(30);
+ALTER TABLE booths ADD CONSTRAINT booths_manager_fk
+    FOREIGN KEY (manager_festival_id, manager_id) REFERENCES users(festival_id, id) ON DELETE SET NULL;
 ALTER TABLE booths ADD COLUMN created_by_id VARCHAR(30) NOT NULL DEFAULT '';
 ALTER TABLE booths ALTER COLUMN created_by_id DROP DEFAULT;
 

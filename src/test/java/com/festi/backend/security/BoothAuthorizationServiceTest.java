@@ -6,14 +6,27 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.festi.backend.booth.Booth;
 import com.festi.backend.booth.BoothCategory;
 import com.festi.backend.booth.BoothType;
+import com.festi.backend.festival.Festival;
+import com.festi.backend.user.User;
 import com.festi.backend.user.UserRole;
+import java.time.LocalDate;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class BoothAuthorizationServiceTest {
 
     private final BoothAuthorizationService boothAuthorizationService = new BoothAuthorizationService();
+
+    private Festival festival;
+
+    @BeforeEach
+    void setUp() {
+        festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
+        ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
+    }
 
     @Test
     void festivalAdminsCanManageAnyBoothEvenWithoutAssignedManager() {
@@ -26,8 +39,9 @@ class BoothAuthorizationServiceTest {
 
     @Test
     void boothManagersCanManageTheirAssignedBooth() {
-        Booth booth = boothWithManager("manager1");
-        AuthenticatedUser boothManager = authenticatedUser("manager1", UserRole.BOOTH_MANAGER);
+        User manager = user("manager1");
+        Booth booth = boothWithManager(manager);
+        AuthenticatedUser boothManager = authenticatedUser(manager.getId(), UserRole.BOOTH_MANAGER);
 
         assertThatCode(() -> boothAuthorizationService.assertCanManageBooth(boothManager, booth))
                 .doesNotThrowAnyException();
@@ -35,7 +49,7 @@ class BoothAuthorizationServiceTest {
 
     @Test
     void boothManagersCannotManageAnotherManagersBooth() {
-        Booth booth = boothWithManager("manager1");
+        Booth booth = boothWithManager(user("manager1"));
         AuthenticatedUser boothManager = authenticatedUser("manager2", UserRole.BOOTH_MANAGER);
 
         assertThatThrownBy(() -> boothAuthorizationService.assertCanManageBooth(boothManager, booth))
@@ -53,16 +67,21 @@ class BoothAuthorizationServiceTest {
 
     @Test
     void regularUsersCannotManageBoothsEvenWhenTheyAreAssignedManager() {
-        Booth booth = boothWithManager("user1");
-        AuthenticatedUser user = authenticatedUser("user1", UserRole.USER);
+        User manager = user("user1");
+        Booth booth = boothWithManager(manager);
+        AuthenticatedUser regularUser = authenticatedUser(manager.getId(), UserRole.USER);
 
-        assertThatThrownBy(() -> boothAuthorizationService.assertCanManageBooth(user, booth))
+        assertThatThrownBy(() -> boothAuthorizationService.assertCanManageBooth(regularUser, booth))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
-    private Booth boothWithManager(String managerId) {
+    private User user(String id) {
+        return new User(festival, id, "hashed-pw", "name", "010-0000-0000");
+    }
+
+    private Booth boothWithManager(User manager) {
         Booth booth = boothWithoutManager();
-        booth.assignManager(managerId);
+        booth.assignManager(manager);
         return booth;
     }
 
