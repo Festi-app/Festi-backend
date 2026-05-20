@@ -12,6 +12,7 @@ import com.festi.backend.booth.BoothDTO;
 import com.festi.backend.booth.BoothService;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.festival.FestivalDTO;
+import com.festi.backend.festival.FestivalDayDTO;
 import com.festi.backend.festival.FestivalService;
 import com.festi.backend.festival.NoticeDTO;
 import com.festi.backend.location.LocationDTO;
@@ -87,7 +88,8 @@ class UserLevelReadControllerIntegrationTest {
         when(menuService.getMenus(boothId)).thenReturn(List.of(
                 new MenuDTO.Response(UUID.randomUUID(), "menu", 5000, "desc", "image", false, (short) 1)));
         when(locationService.getLocations(LocalDate.of(2026, 5, 20), BoothType.DAY)).thenReturn(List.of(
-                new LocationDTO.Response((short) 1, BoothType.DAY, (short) 1, LocalDate.of(2026, 5, 20), "A", boothSummary)));
+                new LocationDTO.Response((short) 1, BoothType.DAY, (short) 1,
+                        new FestivalDayDTO.Summary(UUID.randomUUID(), LocalDate.of(2026, 5, 20)), "A", boothSummary)));
         when(festivalService.getFestival()).thenReturn(new FestivalDTO.Response(
                 UUID.randomUUID(), "Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc"));
         when(festivalService.getNotices()).thenReturn(List.of(

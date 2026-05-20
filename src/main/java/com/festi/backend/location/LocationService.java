@@ -8,24 +8,18 @@ import com.festi.backend.festival.FestivalDayRepository;
 import com.festi.backend.festival.FestivalRepository;
 import java.time.LocalDate;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class LocationService {
 
     private final BoothLocationRepository boothLocationRepository;
     private final FestivalRepository festivalRepository;
     private final FestivalDayRepository festivalDayRepository;
-
-    public LocationService(BoothLocationRepository boothLocationRepository,
-                           FestivalRepository festivalRepository,
-                           FestivalDayRepository festivalDayRepository) {
-        this.boothLocationRepository = boothLocationRepository;
-        this.festivalRepository = festivalRepository;
-        this.festivalDayRepository = festivalDayRepository;
-    }
 
     public List<LocationDTO.Response> getLocations(LocalDate day, BoothType type) {
         Festival festival = festivalRepository.findAll().stream().findFirst()

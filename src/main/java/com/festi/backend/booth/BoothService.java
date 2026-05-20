@@ -12,25 +12,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class BoothService {
 
     private final BoothRepository boothRepository;
     private final BoothLocationRepository boothLocationRepository;
     private final FestivalRepository festivalRepository;
     private final FestivalDayRepository festivalDayRepository;
-
-    public BoothService(BoothRepository boothRepository, BoothLocationRepository boothLocationRepository,
-                        FestivalRepository festivalRepository, FestivalDayRepository festivalDayRepository) {
-        this.boothRepository = boothRepository;
-        this.boothLocationRepository = boothLocationRepository;
-        this.festivalRepository = festivalRepository;
-        this.festivalDayRepository = festivalDayRepository;
-    }
 
     public List<BoothDTO.Summary> getBooths(LocalDate day, BoothType type, BoothCategory category) {
         if (day != null) {
