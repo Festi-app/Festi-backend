@@ -40,6 +40,7 @@ class UserServiceTest {
         UserDTO.Response response = userService.getMe("alice123", festival.getId());
 
         assertThat(response.id()).isEqualTo("alice123");
+        assertThat(response.festivalId()).isEqualTo(festival.getId());
         assertThat(response.name()).isEqualTo("nickname");
         assertThat(response.phone()).isEqualTo("01012345678");
     }

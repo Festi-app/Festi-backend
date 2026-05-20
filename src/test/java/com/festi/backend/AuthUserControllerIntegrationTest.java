@@ -104,7 +104,7 @@ class AuthUserControllerIntegrationTest {
     @Test
     void authenticatedUserCanReadOwnProfile() throws Exception {
         when(userService.getMe(eq("alice123"), any()))
-                .thenReturn(new UserDTO.Response("alice123", "nickname", "01012345678", UserRole.USER));
+                .thenReturn(new UserDTO.Response("alice123", festivalId, "nickname", "01012345678", UserRole.USER));
 
         mockMvc.perform(get("/api/users/me")
                         .header("Authorization", "Bearer " + token("alice123", festivalId, Instant.now().plusSeconds(3600))))
@@ -116,7 +116,7 @@ class AuthUserControllerIntegrationTest {
     void patchUpdatesProfileAndReturnsResponse() throws Exception {
         String tok = token("alice123", festivalId, Instant.now().plusSeconds(3600));
         when(userService.updateMe(eq("alice123"), any(), any()))
-                .thenReturn(new UserDTO.Response("alice123", "new-name", "01012345678", UserRole.USER));
+                .thenReturn(new UserDTO.Response("alice123", festivalId, "new-name", "01012345678", UserRole.USER));
 
         mockMvc.perform(patch("/api/users/me")
                         .header("Authorization", "Bearer " + tok)

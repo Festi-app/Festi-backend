@@ -36,11 +36,11 @@ ALTER TABLE booths ALTER COLUMN created_by_id DROP DEFAULT;
 
 -- Rebuild waitings: change user FK to composite PK reference
 ALTER TABLE waitings DROP COLUMN user_id;
-ALTER TABLE waitings ADD COLUMN user_festival_id UUID NOT NULL REFERENCES festival(id) ON DELETE CASCADE;
+ALTER TABLE waitings ADD COLUMN festival_id UUID NOT NULL REFERENCES festival(id) ON DELETE CASCADE;
 ALTER TABLE waitings ADD COLUMN user_id VARCHAR(30) NOT NULL DEFAULT '';
 ALTER TABLE waitings ALTER COLUMN user_id DROP DEFAULT;
 ALTER TABLE waitings ADD CONSTRAINT waitings_user_fk
-    FOREIGN KEY (user_festival_id, user_id) REFERENCES users(festival_id, id) ON DELETE CASCADE;
+    FOREIGN KEY (festival_id, user_id) REFERENCES users(festival_id, id) ON DELETE CASCADE;
 
 -- Rebuild booth_locations: add festival_id, add unique constraint
 ALTER TABLE booth_locations ADD COLUMN festival_id UUID REFERENCES festival(id) ON DELETE CASCADE;

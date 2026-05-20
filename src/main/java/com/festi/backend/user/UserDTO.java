@@ -3,6 +3,7 @@ package com.festi.backend.user;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 
 public final class UserDTO {
 
@@ -11,6 +12,7 @@ public final class UserDTO {
 
     public record Response(
             String id,
+            UUID festivalId,
             String name,
             String phone,
             UserRole role
@@ -18,6 +20,7 @@ public final class UserDTO {
         public static Response from(User user) {
             return new Response(
                     user.getId(),
+                    user.getFestivalId(),
                     user.getName(),
                     user.getPhone(),
                     user.getRole()

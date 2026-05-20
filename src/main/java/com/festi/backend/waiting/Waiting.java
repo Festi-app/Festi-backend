@@ -39,8 +39,8 @@ public class Waiting {
     @JoinColumn(name = "booth_id", nullable = false)
     private Booth booth;
 
-    @Column(name = "user_festival_id", nullable = false)
-    private UUID userFestivalId;
+    @Column(name = "festival_id", nullable = false)
+    private UUID festivalId;
 
     @Column(name = "user_id", nullable = false, length = 30)
     private String userId;
@@ -64,9 +64,9 @@ public class Waiting {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Waiting(Booth booth, UUID userFestivalId, String userId, short partySize) {
+    public Waiting(Booth booth, UUID festivalId, String userId, short partySize) {
         this.booth = booth;
-        this.userFestivalId = userFestivalId;
+        this.festivalId = festivalId;
         this.userId = userId;
         this.partySize = partySize;
     }
