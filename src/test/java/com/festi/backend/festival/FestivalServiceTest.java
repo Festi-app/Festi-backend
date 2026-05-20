@@ -71,7 +71,7 @@ class FestivalServiceTest {
     }
 
     private Notice notice(Festival festival, String title, boolean pinned, OffsetDateTime createdAt) {
-        Notice notice = new Notice(festival, title, "content", pinned, null);
+        Notice notice = new Notice(festival, title, "content", pinned);
         ReflectionTestUtils.setField(notice, "createdAt", createdAt);
         return notice;
     }

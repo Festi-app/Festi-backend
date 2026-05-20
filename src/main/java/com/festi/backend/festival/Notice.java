@@ -38,15 +38,11 @@ public class Notice extends BaseTimeEntity {
     @Column(name = "pinned", nullable = false)
     private boolean pinned = false;
 
-    @Column(name = "created_by_id", length = 30)
-    private String createdById;
-
-    public Notice(Festival festival, String title, String content, boolean pinned, String createdById) {
+    public Notice(Festival festival, String title, String content, boolean pinned) {
         this.festival = festival;
         this.title = title;
         this.content = content;
         this.pinned = pinned;
-        this.createdById = createdById;
     }
 
     public void update(String title, String content, boolean pinned) {

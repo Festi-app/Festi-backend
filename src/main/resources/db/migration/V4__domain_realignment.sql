@@ -48,9 +48,8 @@ ALTER TABLE booth_locations ADD CONSTRAINT uq_booth_locations_festival_zone_inde
 
 -- Add pinned to notices
 ALTER TABLE notices ADD COLUMN pinned BOOLEAN NOT NULL DEFAULT FALSE;
--- Change notices.created_by to plain string
+-- Drop notices.created_by (replaced by no tracking field)
 ALTER TABLE notices DROP COLUMN created_by;
-ALTER TABLE notices ADD COLUMN created_by_id VARCHAR(30);
 
 -- New tables
 

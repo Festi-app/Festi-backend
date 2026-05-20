@@ -79,6 +79,4 @@ public class Booth extends BaseTimeEntity {
     }
 
     public void assignManager(User manager) { this.manager = manager; }
-    public void openWaiting() { this.isWaitingOpen = true; }
-    public void closeWaiting() { this.isWaitingOpen = false; }
 }
