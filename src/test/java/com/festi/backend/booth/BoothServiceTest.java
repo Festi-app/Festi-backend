@@ -83,7 +83,7 @@ class BoothServiceTest {
     }
 
     private Booth booth(UUID id, String name, BoothCategory category, BoothType type) {
-        Booth booth = new Booth(name, category, type, "creator");
+        Booth booth = new Booth(name, category, type);
         ReflectionTestUtils.setField(booth, "id", id);
         return booth;
     }

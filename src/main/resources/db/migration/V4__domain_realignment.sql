@@ -27,12 +27,10 @@ ALTER TABLE users ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE booths DROP COLUMN is_active;
 ALTER TABLE booths DROP COLUMN manager_id;
 ALTER TABLE booths DROP COLUMN created_by;
-ALTER TABLE booths ADD COLUMN manager_festival_id UUID REFERENCES festival(id) ON DELETE SET NULL;
+ALTER TABLE booths ADD COLUMN festival_id UUID REFERENCES festival(id) ON DELETE SET NULL;
 ALTER TABLE booths ADD COLUMN manager_id VARCHAR(30);
 ALTER TABLE booths ADD CONSTRAINT booths_manager_fk
-    FOREIGN KEY (manager_festival_id, manager_id) REFERENCES users(festival_id, id) ON DELETE SET NULL;
-ALTER TABLE booths ADD COLUMN created_by_id VARCHAR(30) NOT NULL DEFAULT '';
-ALTER TABLE booths ALTER COLUMN created_by_id DROP DEFAULT;
+    FOREIGN KEY (festival_id, manager_id) REFERENCES users(festival_id, id) ON DELETE SET NULL;
 
 -- Rebuild waitings: change user FK to composite PK reference
 ALTER TABLE waitings DROP COLUMN user_id;

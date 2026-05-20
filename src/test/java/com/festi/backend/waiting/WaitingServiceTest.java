@@ -32,7 +32,7 @@ class WaitingServiceTest {
     void readsCurrentUsersWaitingsInRepositoryOrder() {
         String userId = "alice123";
         UUID festivalId = UUID.randomUUID();
-        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT, "creator");
+        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
         ReflectionTestUtils.setField(booth, "id", UUID.randomUUID());
         Waiting waiting = new Waiting(booth, festivalId, userId, (short) 2);
         when(waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc(userId, festivalId))

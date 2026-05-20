@@ -86,7 +86,7 @@ class BoothAuthorizationServiceTest {
     }
 
     private Booth boothWithoutManager() {
-        return new Booth("night booth", BoothCategory.ALCOHOL, BoothType.NIGHT, "creator");
+        return new Booth("night booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
     }
 
     private AuthenticatedUser authenticatedUser(String id, UserRole role) {

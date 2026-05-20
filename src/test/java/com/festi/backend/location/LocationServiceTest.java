@@ -37,7 +37,7 @@ class LocationServiceTest {
     @Test
     void returnsPlacedAndUnplacedLocationsInIndexOrder() {
         LocalDate day = LocalDate.of(2026, 5, 20);
-        Booth booth = new Booth("booth", BoothCategory.INFO, BoothType.DAY, "creator");
+        Booth booth = new Booth("booth", BoothCategory.INFO, BoothType.DAY);
         BoothLocation first = new BoothLocation(festival, BoothType.DAY, day, "A");
         BoothLocation second = new BoothLocation(festival, BoothType.DAY, day, "B");
         first.assignBooth(booth, (short) 1);

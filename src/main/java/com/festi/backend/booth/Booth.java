@@ -33,13 +33,10 @@ public class Booth extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
-            @JoinColumn(name = "manager_festival_id", referencedColumnName = "festival_id"),
+            @JoinColumn(name = "festival_id", referencedColumnName = "festival_id"),
             @JoinColumn(name = "manager_id", referencedColumnName = "id")
     })
     private User manager;
-
-    @Column(name = "created_by_id", nullable = false, length = 30)
-    private String createdById;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -66,11 +63,10 @@ public class Booth extends BaseTimeEntity {
     @Column(name = "is_waiting_open", nullable = false)
     private boolean isWaitingOpen = false;
 
-    public Booth(String name, BoothCategory category, BoothType type, String createdById) {
+    public Booth(String name, BoothCategory category, BoothType type) {
         this.name = name;
         this.category = category;
         this.type = type;
-        this.createdById = createdById;
     }
 
     public void update(String name, BoothCategory category, String description,

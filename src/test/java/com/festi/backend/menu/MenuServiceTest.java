@@ -58,7 +58,7 @@ class MenuServiceTest {
     }
 
     private Booth booth(UUID id) {
-        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT, "creator");
+        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
         ReflectionTestUtils.setField(booth, "id", id);
         return booth;
     }
