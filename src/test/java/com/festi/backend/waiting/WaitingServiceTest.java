@@ -39,7 +39,7 @@ class WaitingServiceTest {
 
         Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
         ReflectionTestUtils.setField(booth, "id", UUID.randomUUID());
-        Waiting waiting = new Waiting(booth, festival, user, (short) 2);
+        Waiting waiting = new Waiting(booth, user, (short) 2);
 
         when(waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc("alice123", festival.getId()))
                 .thenReturn(List.of(waiting));

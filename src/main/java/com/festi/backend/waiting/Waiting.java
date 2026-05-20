@@ -1,7 +1,6 @@
 package com.festi.backend.waiting;
 
 import com.festi.backend.booth.Booth;
-import com.festi.backend.festival.Festival;
 import com.festi.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,12 +42,8 @@ public class Waiting {
     private Booth booth;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "festival_id", nullable = false)
-    private Festival festival;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
-            @JoinColumn(name = "festival_id", referencedColumnName = "festival_id", insertable = false, updatable = false),
+            @JoinColumn(name = "festival_id", referencedColumnName = "festival_id", nullable = false),
             @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     })
     private User user;
@@ -72,9 +67,8 @@ public class Waiting {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Waiting(Booth booth, Festival festival, User user, short partySize) {
+    public Waiting(Booth booth, User user, short partySize) {
         this.booth = booth;
-        this.festival = festival;
         this.user = user;
         this.partySize = partySize;
     }
