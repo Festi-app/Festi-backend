@@ -122,5 +122,5 @@ CREATE INDEX idx_timelines_festival_id_day ON timelines(festival_id, day);
 CREATE INDEX idx_booth_applications_festival_id ON booth_applications(festival_id);
 CREATE INDEX idx_favorites_user ON favorites(festival_id, user_id);
 CREATE INDEX idx_booth_locations_festival_day_type ON booth_locations(festival_id, day, type);
-CREATE INDEX idx_waitings_user ON waitings(user_festival_id, user_id);
+CREATE INDEX idx_waitings_user ON waitings(festival_id, user_id);
 -- Note: booth_admin_assignments table was dropped; no index needed
