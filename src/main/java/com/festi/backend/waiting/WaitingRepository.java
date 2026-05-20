@@ -9,11 +9,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
 
-    @Query("SELECT w FROM Waiting w WHERE w.userId = :userId AND w.festivalId = :festivalId")
+    @Query("SELECT w FROM Waiting w WHERE w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId")
     List<Waiting> findByUserIdAndFestivalId(@Param("userId") String userId, @Param("festivalId") UUID festivalId);
 
     @EntityGraph(attributePaths = "booth")
-    @Query("SELECT w FROM Waiting w WHERE w.userId = :userId AND w.festivalId = :festivalId ORDER BY w.registeredAt DESC")
+    @Query("SELECT w FROM Waiting w WHERE w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId ORDER BY w.registeredAt DESC")
     List<Waiting> findByUserIdAndFestivalIdOrderByRegisteredAtDesc(@Param("userId") String userId, @Param("festivalId") UUID festivalId);
 
     List<Waiting> findByBoothIdAndStatusOrderByRegisteredAt(UUID boothId, WaitingStatus status);

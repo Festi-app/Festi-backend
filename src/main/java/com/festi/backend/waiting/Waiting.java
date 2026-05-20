@@ -1,6 +1,8 @@
 package com.festi.backend.waiting;
 
 import com.festi.backend.booth.Booth;
+import com.festi.backend.festival.Festival;
+import com.festi.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -11,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -39,11 +42,16 @@ public class Waiting {
     @JoinColumn(name = "booth_id", nullable = false)
     private Booth booth;
 
-    @Column(name = "festival_id", nullable = false)
-    private UUID festivalId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "festival_id", nullable = false)
+    private Festival festival;
 
-    @Column(name = "user_id", nullable = false, length = 30)
-    private String userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumns({
+            @JoinColumn(name = "festival_id", referencedColumnName = "festival_id", insertable = false, updatable = false),
+            @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    })
+    private User user;
 
     @Column(name = "party_size", nullable = false)
     private short partySize;
@@ -64,10 +72,10 @@ public class Waiting {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Waiting(Booth booth, UUID festivalId, String userId, short partySize) {
+    public Waiting(Booth booth, Festival festival, User user, short partySize) {
         this.booth = booth;
-        this.festivalId = festivalId;
-        this.userId = userId;
+        this.festival = festival;
+        this.user = user;
         this.partySize = partySize;
     }
 
