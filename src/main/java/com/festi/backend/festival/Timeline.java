@@ -38,7 +38,7 @@ public class Timeline extends BaseTimeEntity {
     private String title;
 
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 200)
     private String artist;
 
     @Column(name = "start_time", nullable = false)
