@@ -26,11 +26,17 @@ class FestivalServiceTest {
     @Mock
     private NoticeRepository noticeRepository;
 
+    @Mock
+    private TimelineRepository timelineRepository;
+
+    @Mock
+    private FestivalDayRepository festivalDayRepository;
+
     private FestivalService festivalService;
 
     @BeforeEach
     void setUp() {
-        festivalService = new FestivalService(festivalRepository, noticeRepository);
+        festivalService = new FestivalService(festivalRepository, noticeRepository, timelineRepository, festivalDayRepository);
     }
 
     @Test

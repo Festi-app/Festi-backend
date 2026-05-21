@@ -59,7 +59,8 @@ class SecurityRoutePolicyIntegrationTest {
                 "/api/booths/" + UUID.randomUUID() + "/menus",
                 "/api/locations",
                 "/api/festival",
-                "/api/festival/notices"
+                "/api/festival/notices",
+                "/api/festival/timelines"
         };
 
         for (String route : routes) {

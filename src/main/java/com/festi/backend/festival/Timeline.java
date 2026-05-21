@@ -37,6 +37,7 @@ public class Timeline extends BaseTimeEntity {
     @Column(nullable = false, length = 200)
     private String title;
 
+
     @Column(nullable = false, length = 200)
     private String artist;
 
@@ -55,6 +56,7 @@ public class Timeline extends BaseTimeEntity {
         this.startTime = startTime;
         this.endTime = endTime;
     }
+
 
     public void update(String title, String artist, LocalTime startTime, LocalTime endTime) {
         this.title = title;

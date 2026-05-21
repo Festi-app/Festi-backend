@@ -15,6 +15,7 @@ import com.festi.backend.festival.FestivalDTO;
 import com.festi.backend.festival.FestivalDayDTO;
 import com.festi.backend.festival.FestivalService;
 import com.festi.backend.festival.NoticeDTO;
+import com.festi.backend.festival.TimelineDTO;
 import com.festi.backend.location.LocationDTO;
 import com.festi.backend.location.LocationService;
 import com.festi.backend.menu.MenuDTO;
@@ -25,6 +26,7 @@ import com.festi.backend.waiting.WaitingService;
 import com.festi.backend.waiting.WaitingStatus;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -95,6 +97,11 @@ class UserLevelReadControllerIntegrationTest {
         when(festivalService.getNotices()).thenReturn(List.of(
                 new NoticeDTO.Response(UUID.randomUUID(), "notice", "content", false,
                         OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
+        when(festivalService.getTimelines()).thenReturn(List.of(
+                new TimelineDTO.Response(UUID.randomUUID(),
+                        new FestivalDayDTO.Summary(UUID.randomUUID(), LocalDate.of(2026, 5, 18)),
+                        "Opening Stage", "Artist A",
+                        LocalTime.of(18, 0), LocalTime.of(19, 0))));
         when(waitingService.getMyWaitings(any(), any())).thenReturn(List.of(
                 new WaitingDTO.Response(waitingId, boothSummary, (short) 2, WaitingStatus.WAITING, (short) 0,
                         OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
@@ -121,6 +128,9 @@ class UserLevelReadControllerIntegrationTest {
         mockMvc.perform(get("/api/festival/notices").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("notice"));
+        mockMvc.perform(get("/api/festival/timelines").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Opening Stage"));
         mockMvc.perform(get("/api/waitings").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].boothSummary.name").value("booth"));
