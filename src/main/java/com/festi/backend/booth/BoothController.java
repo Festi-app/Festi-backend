@@ -3,6 +3,7 @@ package com.festi.backend.booth;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,13 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/booths")
+@RequiredArgsConstructor
 public class BoothController {
 
     private final BoothService boothService;
-
-    public BoothController(BoothService boothService) {
-        this.boothService = boothService;
-    }
 
     @GetMapping
     public ResponseEntity<List<BoothDTO.Summary>> getBooths(
