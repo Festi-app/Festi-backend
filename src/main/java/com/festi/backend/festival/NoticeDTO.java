@@ -12,6 +12,7 @@ public final class NoticeDTO {
             UUID id,
             String title,
             String content,
+            boolean pinned,
             OffsetDateTime createdAt
     ) {
         public static Response from(Notice notice) {
@@ -19,6 +20,7 @@ public final class NoticeDTO {
                     notice.getId(),
                     notice.getTitle(),
                     notice.getContent(),
+                    notice.isPinned(),
                     notice.getCreatedAt()
             );
         }

@@ -22,6 +22,6 @@ public class WaitingController {
     public ResponseEntity<List<WaitingDTO.Response>> getMyWaitings(
             @AuthenticationPrincipal AuthenticatedUser currentUser
     ) {
-        return ResponseEntity.ok(waitingService.getMyWaitings(currentUser.id()));
+        return ResponseEntity.ok(waitingService.getMyWaitings(currentUser.id(), currentUser.festivalId()));
     }
 }

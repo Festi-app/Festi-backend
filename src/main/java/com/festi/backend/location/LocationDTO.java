@@ -2,7 +2,7 @@ package com.festi.backend.location;
 
 import com.festi.backend.booth.BoothDTO;
 import com.festi.backend.booth.BoothType;
-import java.time.LocalDate;
+import com.festi.backend.festival.FestivalDayDTO;
 
 public final class LocationDTO {
 
@@ -13,7 +13,7 @@ public final class LocationDTO {
             Short id,
             BoothType type,
             Short index,
-            LocalDate day,
+            FestivalDayDTO.Summary festivalDay,
             String zoneLabel,
             BoothDTO.Summary boothSummary
     ) {
@@ -22,7 +22,7 @@ public final class LocationDTO {
                     location.getId(),
                     location.getType(),
                     location.getIndex(),
-                    location.getDay(),
+                    FestivalDayDTO.Summary.from(location.getDay()),
                     location.getZoneLabel(),
                     location.getBooth() == null ? null : BoothDTO.Summary.from(location.getBooth())
             );

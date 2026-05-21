@@ -4,7 +4,6 @@ import com.festi.backend.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,20 +22,16 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDTO.Response> getMe(@AuthenticationPrincipal AuthenticatedUser currentUser) {
-        return ResponseEntity.ok(userService.getMe(currentUser.id()));
+        return ResponseEntity.ok(userService.getMe(currentUser.id(), currentUser.festivalId()));
     }
 
     @PatchMapping("/me")
-    public ResponseEntity<UserDTO.UpdateResponse> updateMe(
+    public ResponseEntity<UserDTO.Response> updateMe(
             @AuthenticationPrincipal AuthenticatedUser currentUser,
             @Valid @RequestBody UserDTO.UpdateRequest request
     ) {
-        return ResponseEntity.ok(userService.updateMe(currentUser.id(), request));
+        return ResponseEntity.ok(userService.updateMe(currentUser.id(), currentUser.festivalId(), request));
     }
 
-    @DeleteMapping("/me")
-    public ResponseEntity<Void> deleteMe(@AuthenticationPrincipal AuthenticatedUser currentUser) {
-        userService.deleteMe(currentUser.id());
-        return ResponseEntity.noContent().build();
-    }
+
 }

@@ -6,7 +6,9 @@ import static org.mockito.Mockito.when;
 import com.festi.backend.booth.Booth;
 import com.festi.backend.booth.BoothCategory;
 import com.festi.backend.booth.BoothType;
+import com.festi.backend.festival.Festival;
 import com.festi.backend.user.User;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,13 +33,18 @@ class WaitingServiceTest {
 
     @Test
     void readsCurrentUsersWaitingsInRepositoryOrder() {
-        UUID userId = UUID.randomUUID();
-        User user = new User("user@example.com", "hash", "user", "01012345678");
-        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT, user);
-        Waiting waiting = new Waiting(booth, user, (short) 2);
-        when(waitingRepository.findByUserIdOrderByRegisteredAtDesc(userId)).thenReturn(List.of(waiting));
+        Festival festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
+        ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
+        User user = new User(festival, "alice123", "hashed-password", "nickname", "01012345678");
 
-        List<WaitingDTO.Response> response = waitingService.getMyWaitings(userId);
+        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
+        ReflectionTestUtils.setField(booth, "id", UUID.randomUUID());
+        Waiting waiting = new Waiting(booth, user, (short) 2);
+
+        when(waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc("alice123", festival.getId()))
+                .thenReturn(List.of(waiting));
+
+        List<WaitingDTO.Response> response = waitingService.getMyWaitings("alice123", festival.getId());
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().boothSummary().name()).isEqualTo("booth");

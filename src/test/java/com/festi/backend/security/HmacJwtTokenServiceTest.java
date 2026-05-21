@@ -3,10 +3,12 @@ package com.festi.backend.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.festi.backend.auth.AuthDTO;
+import com.festi.backend.festival.Festival;
 import com.festi.backend.user.User;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import javax.crypto.SecretKey;
@@ -34,17 +36,19 @@ class HmacJwtTokenServiceTest {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        UUID userId = UUID.randomUUID();
-        User user = new User("user@example.com", "hashed-password", "nickname", "01012345678");
-        ReflectionTestUtils.setField(user, "id", userId);
+
+        Festival festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
+        UUID festivalId = UUID.randomUUID();
+        ReflectionTestUtils.setField(festival, "id", festivalId);
+        User user = new User(festival, "alice123", "hashed-password", "nickname", "01012345678");
 
         AuthDTO.TokenResponse token = tokenService.issueAccessToken(user);
         Jwt decoded = decoder.decode(token.accessToken());
 
         assertThat(token.tokenType()).isEqualTo("Bearer");
         assertThat(token.expiresIn()).isEqualTo(3600);
-        assertThat(decoded.getSubject()).isEqualTo(userId.toString());
-        assertThat(decoded.getClaimAsString("email")).isEqualTo("user@example.com");
+        assertThat(decoded.getSubject()).isEqualTo("alice123");
+        assertThat(decoded.getClaimAsString("festivalId")).isEqualTo(festivalId.toString());
         assertThat(decoded.getClaimAsString("role")).isEqualTo("USER");
         assertThat(decoded.getIssuedAt()).isEqualTo(Instant.parse("2030-05-17T00:00:00Z"));
         assertThat(decoded.getExpiresAt()).isEqualTo(Instant.parse("2030-05-17T01:00:00Z"));

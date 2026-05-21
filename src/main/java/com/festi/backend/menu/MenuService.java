@@ -20,7 +20,7 @@ public class MenuService {
     }
 
     public List<MenuDTO.Response> getMenus(UUID boothId) {
-        boothRepository.findByIdAndIsActiveTrue(boothId)
+        boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         return menuItemRepository.findByBoothIdOrderBySortOrder(boothId).stream()
                 .map(MenuDTO.Response::from)

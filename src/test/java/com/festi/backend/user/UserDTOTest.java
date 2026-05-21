@@ -12,21 +12,20 @@ class UserDTOTest {
 
     @Test
     void acceptsPartialProfileUpdate() {
-        UserDTO.UpdateRequest request = new UserDTO.UpdateRequest(null, "new-name", null);
+        UserDTO.UpdateRequest request = new UserDTO.UpdateRequest("new-name", null);
 
         assertThat(validator.validate(request)).isEmpty();
     }
 
     @Test
     void rejectsBlankProfileFieldsWhenTheyArePresent() {
-        assertThat(validator.validate(new UserDTO.UpdateRequest(" ", null, null))).isNotEmpty();
-        assertThat(validator.validate(new UserDTO.UpdateRequest(null, " ", null))).isNotEmpty();
-        assertThat(validator.validate(new UserDTO.UpdateRequest(null, null, " "))).isNotEmpty();
+        assertThat(validator.validate(new UserDTO.UpdateRequest(" ", null))).isNotEmpty();
+        assertThat(validator.validate(new UserDTO.UpdateRequest(null, " "))).isNotEmpty();
     }
 
     @Test
     void rejectsEmptyProfilePatch() {
-        UserDTO.UpdateRequest request = new UserDTO.UpdateRequest(null, null, null);
+        UserDTO.UpdateRequest request = new UserDTO.UpdateRequest(null, null);
 
         assertThat(validator.validate(request)).isNotEmpty();
     }
