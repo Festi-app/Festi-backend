@@ -98,7 +98,8 @@ class UserLevelReadControllerIntegrationTest {
                 new NoticeDTO.Response(UUID.randomUUID(), "notice", "content", false,
                         OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
         when(festivalService.getTimelines()).thenReturn(List.of(
-                new TimelineDTO.Response(UUID.randomUUID(), LocalDate.of(2026, 5, 18),
+                new TimelineDTO.Response(UUID.randomUUID(),
+                        new FestivalDayDTO.Summary(UUID.randomUUID(), LocalDate.of(2026, 5, 18)),
                         "Opening Stage", "Artist A",
                         LocalTime.of(18, 0), LocalTime.of(19, 0))));
         when(waitingService.getMyWaitings(any(), any())).thenReturn(List.of(

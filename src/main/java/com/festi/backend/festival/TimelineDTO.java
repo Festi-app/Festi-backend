@@ -1,6 +1,5 @@
 package com.festi.backend.festival;
 
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -11,16 +10,16 @@ public final class TimelineDTO {
 
     public record Response(
             UUID id,
-            LocalDate day,
+            FestivalDayDTO.Summary festivalDay,
             String title,
             String artist,
             LocalTime startTime,
             LocalTime endTime
     ) {
-        public static Response from(Timeline timeline) {
+        public static Response from(Timeline timeline, FestivalDay festivalDay) {
             return new Response(
                     timeline.getId(),
-                    timeline.getDay(),
+                    FestivalDayDTO.Summary.from(festivalDay),
                     timeline.getTitle(),
                     timeline.getArtist(),
                     timeline.getStartTime(),
