@@ -13,8 +13,8 @@ public class WaitingService {
 
     private final WaitingRepository waitingRepository;
 
-    public List<WaitingDTO.Response> getMyWaitings(UUID userId) {
-        return waitingRepository.findByUserIdOrderByRegisteredAtDesc(userId).stream()
+    public List<WaitingDTO.Response> getMyWaitings(String userId, UUID festivalId) {
+        return waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc(userId, festivalId).stream()
                 .map(WaitingDTO.Response::from)
                 .toList();
     }

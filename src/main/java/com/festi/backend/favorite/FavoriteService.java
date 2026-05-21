@@ -5,8 +5,8 @@ import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.ConflictException;
 import com.festi.backend.common.exception.NotFoundException;
-import com.festi.backend.user.User;
-import com.festi.backend.user.UserRepository;
+import com.festi.backend.festival.Festival;
+import com.festi.backend.festival.FestivalRepository;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -21,43 +21,43 @@ public class FavoriteService {
 
     private final FavoriteRepository favoriteRepository;
     private final BoothRepository boothRepository;
-    private final UserRepository userRepository;
+    private final FestivalRepository festivalRepository;
 
     @Transactional(readOnly = true)
-    public List<FavoriteDTO.Response> getFavorites(UUID userId) {
-        return favoriteRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+    public List<FavoriteDTO.Response> getFavorites(String userId, UUID festivalId) {
+        return favoriteRepository.findByFestivalIdAndUserIdOrderByCreatedAtDesc(festivalId, userId).stream()
                 .map(FavoriteDTO.Response::from)
                 .toList();
     }
 
     @Transactional
-    public FavoriteDTO.Response addFavorite(UUID userId, UUID boothId) {
+    public FavoriteDTO.Response addFavorite(String userId, UUID festivalId, UUID boothId) {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
 
-        if (favoriteRepository.existsByUserIdAndBoothId(userId, boothId)) {
+        if (favoriteRepository.existsByFestivalIdAndUserIdAndBoothId(festivalId, userId, boothId)) {
             throw new ConflictException("Booth is already in favorites.");
         }
 
-        long count = favoriteRepository.countByUserIdAndBoothType(userId, booth.getType());
+        long count = favoriteRepository.countByFestivalIdAndUserIdAndBoothType(festivalId, userId, booth.getType());
         if (count >= MAX_FAVORITES_PER_TYPE) {
             throw new BadRequestException(
                     "Favorites limit reached for type " + booth.getType() + ". Maximum is " + MAX_FAVORITES_PER_TYPE + ".");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found."));
+        Festival festival = festivalRepository.findById(festivalId)
+                .orElseThrow(() -> new NotFoundException("Festival not found."));
 
-        Favorite favorite = favoriteRepository.save(new Favorite(user, booth));
+        Favorite favorite = favoriteRepository.save(new Favorite(festival, userId, booth));
         return FavoriteDTO.Response.from(favorite);
     }
 
     @Transactional
-    public void removeFavorite(UUID userId, UUID favoriteId) {
+    public void removeFavorite(String userId, UUID favoriteId) {
         Favorite favorite = favoriteRepository.findById(favoriteId)
                 .orElseThrow(() -> new NotFoundException("Favorite not found."));
 
-        if (!favorite.getUser().getId().equals(userId)) {
+        if (!favorite.getUserId().equals(userId)) {
             throw new NotFoundException("Favorite not found.");
         }
 

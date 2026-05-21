@@ -59,7 +59,8 @@ public class SecurityConfig {
                                 "/api/festival/notices",
                                 "/api/festival/timelines"
                         ).authenticated()
-                        .requestMatchers("/api/users/me/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/me").authenticated()
 
                         // General User Only
                         .requestMatchers(HttpMethod.POST, "/api/favorites").hasRole("USER")
@@ -110,6 +111,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/approve").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/reject").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/booth-applications/*").hasRole("FESTIVAL_ADMIN")
+
 
                         .anyRequest().denyAll()
                 )

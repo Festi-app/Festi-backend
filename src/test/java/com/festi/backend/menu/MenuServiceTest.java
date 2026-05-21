@@ -9,7 +9,6 @@ import com.festi.backend.booth.BoothCategory;
 import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.common.exception.NotFoundException;
-import com.festi.backend.user.User;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -59,8 +58,7 @@ class MenuServiceTest {
     }
 
     private Booth booth(UUID id) {
-        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT,
-                new User("creator@example.com", "hash", "creator", "01012345678"));
+        Booth booth = new Booth("booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
         ReflectionTestUtils.setField(booth, "id", id);
         return booth;
     }

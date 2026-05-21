@@ -1,7 +1,6 @@
 package com.festi.backend.festival;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
-import com.festi.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -36,19 +35,19 @@ public class Notice extends BaseTimeEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private User createdBy;
+    @Column(name = "pinned", nullable = false)
+    private boolean pinned = false;
 
-    public Notice(Festival festival, String title, String content, User createdBy) {
+    public Notice(Festival festival, String title, String content, boolean pinned) {
         this.festival = festival;
         this.title = title;
         this.content = content;
-        this.createdBy = createdBy;
+        this.pinned = pinned;
     }
 
-    public void update(String title, String content) {
+    public void update(String title, String content, boolean pinned) {
         this.title = title;
         this.content = content;
+        this.pinned = pinned;
     }
 }

@@ -11,8 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -31,13 +31,12 @@ public class Booth extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id")
-    private User manager;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private User createdBy;
+    @JoinColumns({
+            @JoinColumn(name = "festival_id", referencedColumnName = "festival_id"),
+            @JoinColumn(name = "manager_id", referencedColumnName = "id")
+    })
+    private User manager;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -64,11 +63,10 @@ public class Booth extends BaseTimeEntity {
     @Column(name = "is_waiting_open", nullable = false)
     private boolean isWaitingOpen = false;
 
-    public Booth(String name, BoothCategory category, BoothType type, User createdBy) {
+    public Booth(String name, BoothCategory category, BoothType type) {
         this.name = name;
         this.category = category;
         this.type = type;
-        this.createdBy = createdBy;
     }
 
     public void update(String name, BoothCategory category, String description,
@@ -82,5 +80,6 @@ public class Booth extends BaseTimeEntity {
 
     public void assignManager(User manager) { this.manager = manager; }
     public void openWaiting() { this.isWaitingOpen = true; }
+
     public void closeWaiting() { this.isWaitingOpen = false; }
 }

@@ -1,23 +1,32 @@
 package com.festi.backend.location;
 
 import com.festi.backend.booth.BoothType;
+import com.festi.backend.common.exception.NotFoundException;
+import com.festi.backend.festival.Festival;
+import com.festi.backend.festival.FestivalDay;
+import com.festi.backend.festival.FestivalDayRepository;
+import com.festi.backend.festival.FestivalRepository;
 import java.time.LocalDate;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class LocationService {
 
     private final BoothLocationRepository boothLocationRepository;
-
-    public LocationService(BoothLocationRepository boothLocationRepository) {
-        this.boothLocationRepository = boothLocationRepository;
-    }
+    private final FestivalRepository festivalRepository;
+    private final FestivalDayRepository festivalDayRepository;
 
     public List<LocationDTO.Response> getLocations(LocalDate day, BoothType type) {
-        return boothLocationRepository.findByDayAndTypeOrderByIndex(day, type).stream()
+        Festival festival = festivalRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("Festival not found."));
+        FestivalDay festivalDay = festivalDayRepository.findByFestivalIdAndDay(festival.getId(), day)
+                .orElseThrow(() -> new NotFoundException("Festival day not found."));
+        return boothLocationRepository.findByDayAndTypeOrderByIndex(festivalDay, type).stream()
                 .map(LocationDTO.Response::from)
                 .toList();
     }

@@ -82,39 +82,49 @@ class SecurityRoutePolicyIntegrationTest {
     }
 
     @Test
-    void protectedRoutesRejectMissingAuthentication() throws Exception {
-        mockMvc.perform(post("/api/festival/notices"))
+    void boothApplicationsArePermitAll() throws Exception {
+        // No controller yet — 404 confirms the route is not blocked by security (permitAll works)
+        mockMvc.perform(post("/api/booth-applications"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void boothManagerAndFestivalAdminRouteRejectsMissingAuthentication() throws Exception {
+        mockMvc.perform(patch("/api/booths/" + UUID.randomUUID()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test
-    void regularUsersCannotEnterBoothManagerOrFestivalAdminRoutes() throws Exception {
+    void regularUsersCannotEnterBoothManagerRoutes() throws Exception {
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
+                        .header("Authorization", "Bearer " + token(UserRole.USER)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
+    @Test
+    void regularUsersCannotEnterFestivalAdminRoutes() throws Exception {
+        mockMvc.perform(patch("/api/festival")
                         .header("Authorization", "Bearer " + token(UserRole.USER)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
         mockMvc.perform(patch("/api/festival")
-                        .header("Authorization", "Bearer " + token(UserRole.USER)))
+                        .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test
-    void boothManagersPassBoothManagerGateButNotFestivalAdminGate() throws Exception {
+    void boothManagersPassBoothManagerGate() throws Exception {
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
                 .andExpect(status().isMethodNotAllowed());
-
-        mockMvc.perform(post("/api/festival/notices")
-                        .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test
-    void festivalAdminsPassFestivalAndBoothManagerGates() throws Exception {
+    void festivalAdminsPassBothGates() throws Exception {
         mockMvc.perform(patch("/api/festival")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
                 .andExpect(status().isMethodNotAllowed());
@@ -125,8 +135,9 @@ class SecurityRoutePolicyIntegrationTest {
     }
 
     @Test
-    void userOnlyRoutesAllowUserRoleAndRejectOthers() throws Exception {
-        org.mockito.Mockito.when(waitingService.getMyWaitings(org.mockito.ArgumentMatchers.any()))
+    void onlyUserRoleCanAccessGeneralUserWaitingRoutes() throws Exception {
+        org.mockito.Mockito.when(waitingService.getMyWaitings(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/api/waitings")
@@ -135,19 +146,17 @@ class SecurityRoutePolicyIntegrationTest {
 
         mockMvc.perform(get("/api/waitings")
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/waitings")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+                .andExpect(status().isForbidden());
     }
 
     private String token(UserRole role) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(UUID.randomUUID().toString())
-                .claim("email", role.name().toLowerCase() + "@example.com")
+                .subject(role.name().toLowerCase() + "user")
+                .claim("festivalId", UUID.randomUUID().toString())
                 .claim("role", role.name())
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))

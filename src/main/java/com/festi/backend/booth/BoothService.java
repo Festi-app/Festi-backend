@@ -1,6 +1,10 @@
 package com.festi.backend.booth;
 
 import com.festi.backend.common.exception.NotFoundException;
+import com.festi.backend.festival.Festival;
+import com.festi.backend.festival.FestivalDay;
+import com.festi.backend.festival.FestivalDayRepository;
+import com.festi.backend.festival.FestivalRepository;
 import com.festi.backend.location.BoothLocation;
 import com.festi.backend.location.BoothLocationRepository;
 import java.time.LocalDate;
@@ -19,6 +23,8 @@ public class BoothService {
 
     private final BoothRepository boothRepository;
     private final BoothLocationRepository boothLocationRepository;
+    private final FestivalRepository festivalRepository;
+    private final FestivalDayRepository festivalDayRepository;
 
     public List<BoothDTO.Summary> getBooths(LocalDate day, BoothType type, BoothCategory category) {
         if (day != null) {
@@ -36,9 +42,13 @@ public class BoothService {
     }
 
     private List<BoothDTO.Summary> getPlacedBooths(LocalDate day, BoothType type, BoothCategory category) {
+        Festival festival = festivalRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("Festival not found."));
+        FestivalDay festivalDay = festivalDayRepository.findByFestivalIdAndDay(festival.getId(), day)
+                .orElseThrow(() -> new NotFoundException("Festival day not found."));
         List<BoothLocation> locations = type == null
-                ? boothLocationRepository.findByDayOrderByIndex(day)
-                : boothLocationRepository.findByDayAndTypeOrderByIndex(day, type);
+                ? boothLocationRepository.findByDayOrderByIndex(festivalDay)
+                : boothLocationRepository.findByDayAndTypeOrderByIndex(festivalDay, type);
 
         Map<UUID, Booth> uniqueBooths = new LinkedHashMap<>();
         for (BoothLocation location : locations) {

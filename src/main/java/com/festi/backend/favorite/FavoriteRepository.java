@@ -11,10 +11,12 @@ import org.springframework.data.repository.query.Param;
 public interface FavoriteRepository extends JpaRepository<Favorite, UUID> {
 
     @EntityGraph(attributePaths = "booth")
-    List<Favorite> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<Favorite> findByFestivalIdAndUserIdOrderByCreatedAtDesc(UUID festivalId, String userId);
 
-    boolean existsByUserIdAndBoothId(UUID userId, UUID boothId);
+    boolean existsByFestivalIdAndUserIdAndBoothId(UUID festivalId, String userId, UUID boothId);
 
-    @Query("SELECT COUNT(f) FROM Favorite f WHERE f.user.id = :userId AND f.booth.type = :boothType")
-    long countByUserIdAndBoothType(@Param("userId") UUID userId, @Param("boothType") BoothType boothType);
+    @Query("SELECT COUNT(f) FROM Favorite f WHERE f.festival.id = :festivalId AND f.userId = :userId AND f.booth.type = :boothType")
+    long countByFestivalIdAndUserIdAndBoothType(@Param("festivalId") UUID festivalId,
+                                                @Param("userId") String userId,
+                                                @Param("boothType") BoothType boothType);
 }

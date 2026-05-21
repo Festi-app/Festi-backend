@@ -16,8 +16,8 @@ public class JwtAuthenticationConverter
     public AuthenticatedUserAuthenticationToken convert(Jwt jwt) {
         UserRole role = parseRole(jwt.getClaimAsString("role"));
         AuthenticatedUser principal = new AuthenticatedUser(
-                parseUserId(jwt.getSubject()),
-                requireEmail(jwt.getClaimAsString("email")),
+                requireUserId(jwt.getSubject()),
+                parseFestivalId(jwt.getClaimAsString("festivalId")),
                 role
         );
 
@@ -32,31 +32,29 @@ public class JwtAuthenticationConverter
         if (!StringUtils.hasText(roleClaim)) {
             throw invalidToken("JWT role claim is missing.");
         }
-
         try {
             return UserRole.valueOf(roleClaim);
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException e) {
             throw invalidToken("JWT role claim is invalid.");
         }
     }
 
-    private UUID parseUserId(String subject) {
+    private String requireUserId(String subject) {
         if (!StringUtils.hasText(subject)) {
             throw invalidToken("JWT subject claim is missing.");
         }
-
-        try {
-            return UUID.fromString(subject);
-        } catch (IllegalArgumentException exception) {
-            throw invalidToken("JWT subject claim is invalid.");
-        }
+        return subject;
     }
 
-    private String requireEmail(String emailClaim) {
-        if (!StringUtils.hasText(emailClaim)) {
-            throw invalidToken("JWT email claim is missing.");
+    private UUID parseFestivalId(String festivalIdClaim) {
+        if (!StringUtils.hasText(festivalIdClaim)) {
+            throw invalidToken("JWT festivalId claim is missing.");
         }
-        return emailClaim;
+        try {
+            return UUID.fromString(festivalIdClaim);
+        } catch (IllegalArgumentException e) {
+            throw invalidToken("JWT festivalId claim is invalid.");
+        }
     }
 
     private InvalidBearerTokenException invalidToken(String message) {

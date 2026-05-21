@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -41,7 +42,10 @@ public class Waiting {
     private Booth booth;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumns({
+            @JoinColumn(name = "festival_id", referencedColumnName = "festival_id", nullable = false),
+            @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    })
     private User user;
 
     @Column(name = "party_size", nullable = false)

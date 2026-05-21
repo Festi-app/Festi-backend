@@ -23,10 +23,6 @@ class PostgresMigrationApplicationTests {
             "select count(*) from flyway_schema_history where success = true",
             Integer.class
         );
-        Boolean boothAdminAssignmentsExists = jdbcTemplate.queryForObject(
-            "select to_regclass('public.booth_admin_assignments') is not null",
-            Boolean.class
-        );
         String phoneNullable = jdbcTemplate.queryForObject(
             """
             select is_nullable
@@ -39,7 +35,6 @@ class PostgresMigrationApplicationTests {
         );
 
         assertThat(appliedMigrationCount).isGreaterThan(0);
-        assertThat(boothAdminAssignmentsExists).isTrue();
         assertThat(phoneNullable).isEqualTo("NO");
     }
 }

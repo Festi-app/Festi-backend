@@ -7,11 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.festi.backend.booth.BoothDTO;
 import com.festi.backend.booth.BoothCategory;
+import com.festi.backend.booth.BoothDTO;
 import com.festi.backend.booth.BoothService;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.festival.FestivalDTO;
+import com.festi.backend.festival.FestivalDayDTO;
 import com.festi.backend.festival.FestivalService;
 import com.festi.backend.festival.NoticeDTO;
 import com.festi.backend.festival.TimelineDTO;
@@ -89,17 +90,18 @@ class UserLevelReadControllerIntegrationTest {
         when(menuService.getMenus(boothId)).thenReturn(List.of(
                 new MenuDTO.Response(UUID.randomUUID(), "menu", 5000, "desc", "image", false, (short) 1)));
         when(locationService.getLocations(LocalDate.of(2026, 5, 20), BoothType.DAY)).thenReturn(List.of(
-                new LocationDTO.Response((short) 1, BoothType.DAY, (short) 1, LocalDate.of(2026, 5, 20), "A", boothSummary)));
+                new LocationDTO.Response((short) 1, BoothType.DAY, (short) 1,
+                        new FestivalDayDTO.Summary(UUID.randomUUID(), LocalDate.of(2026, 5, 20)), "A", boothSummary)));
         when(festivalService.getFestival()).thenReturn(new FestivalDTO.Response(
                 UUID.randomUUID(), "Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc"));
         when(festivalService.getNotices()).thenReturn(List.of(
-                new NoticeDTO.Response(UUID.randomUUID(), "notice", "content", OffsetDateTime.of(
-                        2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
+                new NoticeDTO.Response(UUID.randomUUID(), "notice", "content", false,
+                        OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
         when(festivalService.getTimelines()).thenReturn(List.of(
                 new TimelineDTO.Response(UUID.randomUUID(), LocalDate.of(2026, 5, 18),
                         "Opening Stage", "Artist A",
                         LocalTime.of(18, 0), LocalTime.of(19, 0))));
-        when(waitingService.getMyWaitings(any())).thenReturn(List.of(
+        when(waitingService.getMyWaitings(any(), any())).thenReturn(List.of(
                 new WaitingDTO.Response(waitingId, boothSummary, (short) 2, WaitingStatus.WAITING, (short) 0,
                         OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
 
@@ -140,10 +142,17 @@ class UserLevelReadControllerIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void boothManagerCannotAccessUserOnlyWaitingRoute() throws Exception {
+        mockMvc.perform(get("/api/waitings")
+                        .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
+                .andExpect(status().isForbidden());
+    }
+
     private String token(UserRole role) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(UUID.randomUUID().toString())
-                .claim("email", role.name().toLowerCase() + "@example.com")
+                .subject(role.name().toLowerCase() + "user")
+                .claim("festivalId", UUID.randomUUID().toString())
                 .claim("role", role.name())
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))

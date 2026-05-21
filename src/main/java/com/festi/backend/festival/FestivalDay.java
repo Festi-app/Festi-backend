@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
@@ -19,9 +20,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "timelines")
+@Table(
+        name = "festival_days",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"festival_id", "day"})
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Timeline extends BaseTimeEntity {
+public class FestivalDay extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,34 +38,27 @@ public class Timeline extends BaseTimeEntity {
     @Column(nullable = false)
     private LocalDate day;
 
-    @Column(nullable = false, length = 200)
-    private String title;
+    @Column(name = "day_start")
+    private LocalTime dayStart;
 
+    @Column(name = "day_end")
+    private LocalTime dayEnd;
 
-    @Column(nullable = false, length = 20)
-    private String artist;
+    @Column(name = "night_start")
+    private LocalTime nightStart;
 
-    @Column(name = "start_time", nullable = false)
-    private LocalTime startTime;
+    @Column(name = "night_end")
+    private LocalTime nightEnd;
 
-    @Column(name = "end_time", nullable = false)
-    private LocalTime endTime;
-
-    public Timeline(Festival festival, LocalDate day, String title, String artist,
-                    LocalTime startTime, LocalTime endTime) {
+    public FestivalDay(Festival festival, LocalDate day) {
         this.festival = festival;
         this.day = day;
-        this.title = title;
-        this.artist = artist;
-        this.startTime = startTime;
-        this.endTime = endTime;
     }
 
-
-    public void update(String title, String artist, LocalTime startTime, LocalTime endTime) {
-        this.title = title;
-        this.artist = artist;
-        this.startTime = startTime;
-        this.endTime = endTime;
+    public void updateHours(LocalTime dayStart, LocalTime dayEnd, LocalTime nightStart, LocalTime nightEnd) {
+        this.dayStart = dayStart;
+        this.dayEnd = dayEnd;
+        this.nightStart = nightStart;
+        this.nightEnd = nightEnd;
     }
 }

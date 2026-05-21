@@ -1,13 +1,16 @@
 package com.festi.backend.user;
 
 import com.festi.backend.common.entity.BaseTimeEntity;
+import com.festi.backend.festival.Festival;
 import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -22,12 +25,13 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @EmbeddedId
+    private UserPK pk;
 
-    @Column(nullable = false, unique = true, length = 255)
-    private String email;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("festivalId")
+    @JoinColumn(name = "festival_id", nullable = false)
+    private Festival festival;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
@@ -43,17 +47,23 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, columnDefinition = "user_role")
     private UserRole role = UserRole.USER;
 
-    public User(String email, String passwordHash, String name, String phone) {
-        this.email = email;
+    public User(Festival festival, String id, String passwordHash, String name, String phone) {
+        this.pk = new UserPK(festival.getId(), id);
+        this.festival = festival;
         this.passwordHash = passwordHash;
         this.name = name;
         this.phone = phone;
     }
 
-    public void updateProfile(String email, String name, String phone) {
-        if (email != null) {
-            this.email = email;
-        }
+    public String getId() {
+        return pk.getId();
+    }
+
+    public UUID getFestivalId() {
+        return pk.getFestivalId();
+    }
+
+    public void updateProfile(String name, String phone) {
         if (name != null) {
             this.name = name;
         }

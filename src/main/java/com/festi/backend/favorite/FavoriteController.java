@@ -26,7 +26,7 @@ public class FavoriteController {
     public ResponseEntity<List<FavoriteDTO.Response>> getFavorites(
             @AuthenticationPrincipal AuthenticatedUser currentUser
     ) {
-        return ResponseEntity.ok(favoriteService.getFavorites(currentUser.id()));
+        return ResponseEntity.ok(favoriteService.getFavorites(currentUser.id(), currentUser.festivalId()));
     }
 
     @PostMapping
@@ -34,7 +34,8 @@ public class FavoriteController {
             @AuthenticationPrincipal AuthenticatedUser currentUser,
             @RequestBody FavoriteDTO.Request request
     ) {
-        FavoriteDTO.Response response = favoriteService.addFavorite(currentUser.id(), request.boothId());
+        FavoriteDTO.Response response = favoriteService.addFavorite(
+                currentUser.id(), currentUser.festivalId(), request.boothId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
