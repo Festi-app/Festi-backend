@@ -40,7 +40,7 @@ class MenuServiceTest {
     void returnsMenusInRepositoryOrder() {
         UUID boothId = UUID.randomUUID();
         Booth booth = booth(boothId);
-        when(boothRepository.findByIdAndIsActiveTrue(boothId)).thenReturn(Optional.of(booth));
+        when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
         when(menuItemRepository.findByBoothIdOrderBySortOrder(boothId))
                 .thenReturn(List.of(menu(booth, "tteokbokki", (short) 1), menu(booth, "ramen", (short) 2)));
 
@@ -52,7 +52,7 @@ class MenuServiceTest {
     @Test
     void rejectsMenusForMissingBooth() {
         UUID boothId = UUID.randomUUID();
-        when(boothRepository.findByIdAndIsActiveTrue(boothId)).thenReturn(Optional.empty());
+        when(boothRepository.findById(boothId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> menuService.getMenus(boothId))
                 .isInstanceOf(NotFoundException.class);

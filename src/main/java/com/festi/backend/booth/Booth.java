@@ -61,9 +61,6 @@ public class Booth extends BaseTimeEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
-
     @Column(name = "is_waiting_open", nullable = false)
     private boolean isWaitingOpen = false;
 
@@ -84,7 +81,6 @@ public class Booth extends BaseTimeEntity {
     }
 
     public void assignManager(User manager) { this.manager = manager; }
-    public void deactivate() { this.isActive = false; }
     public void openWaiting() { this.isWaitingOpen = true; }
     public void closeWaiting() { this.isWaitingOpen = false; }
 }
