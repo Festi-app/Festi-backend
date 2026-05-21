@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.util.Arrays;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -27,18 +28,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
-
-    public SecurityConfig(
-            RestAuthenticationEntryPoint authenticationEntryPoint,
-            RestAccessDeniedHandler accessDeniedHandler
-    ) {
-        this.authenticationEntryPoint = authenticationEntryPoint;
-        this.accessDeniedHandler = accessDeniedHandler;
-    }
 
     @Bean
     SecurityFilterChain securityFilterChain(
@@ -50,7 +44,11 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Permit All
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/booth-applications").permitAll()
+
+                        // All Authenticated Users
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/booths",
@@ -58,19 +56,22 @@ public class SecurityConfig {
                                 "/api/booths/*/menus",
                                 "/api/locations",
                                 "/api/festival",
-                                "/api/festival/notices"
+                                "/api/festival/notices",
+                                "/api/festival/timelines"
                         ).authenticated()
                         .requestMatchers("/api/users/me/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/booths/*/waitings").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/waitings/*").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/waitings").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/booths").hasRole("FESTIVAL_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/booths/*").hasRole("FESTIVAL_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/locations").hasRole("FESTIVAL_ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/locations/*").hasRole("FESTIVAL_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/locations/*").hasRole("FESTIVAL_ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/festival").hasRole("FESTIVAL_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/festival/notices").hasRole("FESTIVAL_ADMIN")
+
+                        // General User Only
+                        .requestMatchers(HttpMethod.POST, "/api/favorites").hasRole("USER")
+                        .requestMatchers(HttpMethod.GET, "/api/favorites").hasRole("USER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/favorites/*").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/booths/*/waitings").hasRole("USER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/waitings/*").hasRole("USER")
+                        .requestMatchers(HttpMethod.GET, "/api/waitings").hasRole("USER")
+
+                        // Booth Manager (+ Festival Admin passthrough)
+                        .requestMatchers(HttpMethod.GET, "/api/booth-applications/me")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/booths/*")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/booths/*/menus")
@@ -89,6 +90,27 @@ public class SecurityConfig {
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/booths/*/waitings/status")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+
+                        // Festival Admin Only
+                        .requestMatchers(HttpMethod.PATCH, "/api/festival").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/festival/days").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/festival/days/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/festival/days/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/festival/notices").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/festival/notices/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/festival/notices/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/festival/timelines").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/festival/timelines/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/festival/timelines/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/locations/slots").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/locations/*/assignment").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/locations/*/assignment").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/booth-applications").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/booth-applications/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/approve").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/reject").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/admin/booth-applications/*").hasRole("FESTIVAL_ADMIN")
+
                         .anyRequest().denyAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
