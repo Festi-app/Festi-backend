@@ -4,9 +4,11 @@
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD와 `docs/PATCH.md`의 변경사항을 기준으로 도메인 모델, JWT 인증, 역할 기반 인가, 사용자 조회 API를 구성한다.
 
-현재 `main` 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 내 웨이팅 조회 API까지 구현되어 있다.
+현재 `main` 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, Swagger/OpenAPI 문서화까지 구현되어 있다.
 
-남은 핵심 작업은 부스 신청/승인 워크플로우, 축제 관리자 변경 API, 부스 관리자 변경 API, 웨이팅 등록/취소/호출/알림 API, 그리고 해당 기능 테스트 보강이다.
+남은 핵심 작업은 부스 신청/승인 워크플로우, 축제 관리자 변경 API, 부스 관리자 변경 API, 부스 관리자 웨이팅 운영/호출/알림 API, 그리고 현재 구현된 일반 사용자 API의 validation/test 보강이다.
+
+마지막 코드베이스 검증은 2026-05-22에 CGC 전체 인덱스를 재생성한 뒤 수행했다.
 
 | Priority | Scope | Status |
 | --- | --- | --- |
@@ -17,12 +19,13 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 | 5 | SecurityConfig와 권한 체계 적용 | Done |
 | 6 | 모든 인증 사용자용 조회 API 구현 | Done |
 | 7 | PATCH 기반 도메인/migration 재정렬 | Done |
-| 8 | 일반 사용자 API 구현 | Partial |
+| 8 | 일반 사용자 API 구현 | Done |
 | 9 | 부스 신청/승인/삭제 워크플로우 구현 | Next |
 | 10 | 축제 관리자 API 구현 | Pending |
 | 11 | 부스 관리자 API 구현 | Pending |
-| 12 | 웨이팅 명령 + 알림 API 구현 | Pending |
+| 12 | 부스 관리자 웨이팅 운영 + 알림 API 구현 | Pending |
 | 13 | controller/service/repository 테스트 보강 | In Progress |
+| 14 | Swagger/OpenAPI 문서화 | Done |
 
 ## Tech Stack
 
@@ -36,6 +39,7 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 - Spring Data JPA
 - PostgreSQL
 - Flyway
+- springdoc-openapi
 - JUnit 5 / Spring Boot Test / Spring Security Test
 
 ## Current Implementation Baseline
@@ -116,6 +120,7 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - `findByUserIdAndFestivalId`
   - `findByUserIdAndFestivalIdOrderByRegisteredAtDesc`
   - `findByBoothIdAndStatusOrderByRegisteredAt`
+  - `countByUserIdAndFestivalIdAndStatusIn`
 - `FavoriteRepository`
   - `findByFestivalIdAndUserIdOrderByCreatedAtDesc`
   - `existsByFestivalIdAndUserIdAndBoothId`
@@ -133,6 +138,19 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - `findByFestivalIdOrderByDayAscStartTimeAsc`
 
 `BoothAdminAssignmentRepository`와 `booth_admin_assignments` table은 PATCH 재정렬 후 제거되었다. v1 부스 관리자 소유권은 `booths.manager_id`를 기준으로 판단한다.
+
+### Implemented API Documentation
+
+- `springdoc-openapi-starter-webmvc-ui:3.0.3`
+- `OpenApiConfig`
+  - API title/version/description
+  - JWT bearer security scheme
+- Swagger/OpenAPI route allowlist
+  - `/swagger-ui.html`
+  - `/swagger-ui/**`
+  - `/v3/api-docs`
+  - `/v3/api-docs/**`
+- 현재 controller에는 `@Tag`, `@Operation`, `@ApiResponses`, `@SecurityRequirement` 기반 문서화가 적용되어 있다.
 
 ### Implemented Migrations
 
@@ -350,11 +368,11 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `BoothApplication`은 domain/repository/migration만 구현되어 있고 신청/승인/거절/삭제 service/controller는 아직 없다.
 - 배치도 slot 생성/배정/취소 API는 아직 없다.
 - 푸드트럭 manager를 축제 관리자 계정으로 배정하는 생성 로직은 아직 없다.
-- 웨이팅 등록/취소/호출/상태 변경/알림 로직은 아직 없다.
+- 부스 관리자용 웨이팅 목록/호출/상태 변경/알림 로직은 아직 없다.
 
 ## Priority 8: General User APIs
 
-일반 사용자 전용 API 중 즐겨찾기와 내 웨이팅 조회가 구현되어 있다.
+일반 사용자 전용 API 중 즐겨찾기와 웨이팅 등록/조회/취소가 구현되어 있다.
 
 ### Implemented APIs
 
@@ -372,14 +390,22 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - `USER`만 접근 가능
   - 현재 사용자와 축제 ID 기준 조회
   - `booth` fetch plan 적용
-
-### Remaining Work
-
 - `POST /api/booths/{boothId}/waitings`
+  - `USER`만 접근 가능
+  - `NIGHT` 부스만 등록 가능
+  - 부스의 `isWaitingOpen`이 true일 때만 등록 가능
+  - 현재 사용자 기준 active waiting(`WAITING`, `CALLED`) 최대 3개 제한
 - `DELETE /api/waitings/{waitingId}`
+  - `USER`만 접근 가능
+  - 본인 웨이팅만 취소 가능
+  - `WAITING`, `CALLED` 상태만 취소 가능
+
+### Follow-Up Hardening
+
 - 즐겨찾기 request validation 보강
 - `FavoriteServiceTest` / favorite controller integration test 추가
-- 웨이팅 등록/취소 정책 테스트 추가
+- `WaitingServiceTest`의 등록/취소 정책 테스트 추가
+- 웨이팅 controller integration test 추가
 
 ## Priority 9: Booth Application Workflow
 
@@ -465,32 +491,35 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 메뉴 생성/수정은 `NIGHT` 부스에서만 허용한다.
 - `FOOD_TRUCK`은 내부적으로 `Booth`지만 부스 관리자 계정이 아닌 축제 관리자 계정이 manager다.
 
-## Priority 12: Waiting Commands and Notifications
+## Priority 12: Booth Manager Waiting Operations and Notifications
 
-현재는 `GET /api/waitings` 내 웨이팅 조회만 구현되어 있다. 웨이팅 등록, 취소, 부스 관리자용 조회/호출/상태 변경, 알림 전송은 아직 구현되지 않았다.
+일반 사용자용 웨이팅 등록/조회/취소는 구현되어 있다. 남은 범위는 부스 관리자용 웨이팅 목록/호출/상태 변경, 웨이팅 오픈/마감, 호출 알림 전송이다.
 
-### APIs To Implement
-
-#### General User Only
+### Implemented General User APIs
 
 - `POST /api/booths/{boothId}/waitings`
+- `GET /api/waitings`
 - `DELETE /api/waitings/{waitingId}`
 
-#### Booth Manager
+### APIs To Implement
 
 - `GET /api/booths/{boothId}/waitings`
 - `POST /api/waitings/{waitingId}/call`
 - `PATCH /api/waitings/{waitingId}/status`
 - `PATCH /api/booths/{boothId}/waitings/status`
 
-### Validation Rules
+### Implemented Validation Rules
 
 - 웨이팅 등록은 `USER`만 가능하다.
 - 웨이팅은 `NIGHT` 부스에만 등록할 수 있다.
-- `FOOD_TRUCK`은 웨이팅 대상이 아니다.
+- `FOOD_TRUCK`은 `NIGHT`가 아니므로 웨이팅 등록 대상이 아니다.
 - 사용자당 최대 3개까지 웨이팅을 등록할 수 있다.
 - 부스의 웨이팅이 open 상태일 때만 등록할 수 있다.
 - 웨이팅 취소는 본인만 가능하다.
+- 취소 가능한 상태는 `WAITING`, `CALLED`다.
+
+### Validation Rules To Implement
+
 - 호출 시 `callCount`를 증가시킨다.
 - 호출 시 서버는 사용자 앱으로 알림을 전송한다.
 - 상태 전이는 `WAITING -> CALLED -> SEATED` 흐름을 기본으로 하고, 사용자 취소는 `CANCELLED`로 처리한다.
@@ -574,10 +603,40 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필요한 변경은 `./gradlew postgresTest`도 통과해야 한다.
 
+## Priority 14: Swagger/OpenAPI Documentation
+
+현재 구현된 controller는 Swagger/OpenAPI 주석이 적용되어 있고, OpenAPI metadata와 JWT bearer security scheme이 설정되어 있다.
+
+### Completed Deliverables
+
+- `springdoc-openapi-starter-webmvc-ui:3.0.3` 의존성 추가
+- `OpenApiConfig` 추가
+  - API title/version/description 설정
+  - `bearerAuth` JWT security scheme 설정
+- `SecurityConfig`에서 Swagger/OpenAPI 문서 route를 `permitAll` 처리
+- 현재 controller 문서화
+  - `AuthController`
+  - `UserController`
+  - `BoothController`
+  - `MenuController`
+  - `LocationController`
+  - `FestivalController`
+  - `FavoriteController`
+  - `WaitingController`
+
+### Follow-Up
+
+- Priority 9-12에서 새 controller를 추가할 때 같은 OpenAPI annotation 기준을 적용한다.
+- 구현되지 않은 endpoint가 controller에 추가되면 `docs/API-ENDPOINTS.md`와 Swagger 설명을 함께 갱신한다.
+
 ## API Access Policy
 
 ### Permit All
 
+- `GET /swagger-ui.html` - Implemented
+- `GET /swagger-ui/**` - Implemented
+- `GET /v3/api-docs` - Implemented
+- `GET /v3/api-docs/**` - Implemented
 - `POST /api/auth/signup` - Implemented
 - `POST /api/auth/login` - Implemented
 - `POST /api/booth-applications` - Security policy only, controller pending
@@ -599,8 +658,8 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `POST /api/favorites` - Implemented
 - `GET /api/favorites` - Implemented
 - `DELETE /api/favorites/{favoriteId}` - Implemented
-- `POST /api/booths/{boothId}/waitings` - Security policy only, controller pending
-- `DELETE /api/waitings/{waitingId}` - Security policy only, controller pending
+- `POST /api/booths/{boothId}/waitings` - Implemented
+- `DELETE /api/waitings/{waitingId}` - Implemented
 - `GET /api/waitings` - Implemented
 
 ### Booth Manager
