@@ -83,9 +83,8 @@ class SecurityRoutePolicyIntegrationTest {
 
     @Test
     void boothApplicationsArePermitAll() throws Exception {
-        // No controller yet — 404 confirms the route is not blocked by security (permitAll works)
         mockMvc.perform(post("/api/booth-applications"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
     }
 
     @Test

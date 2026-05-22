@@ -91,8 +91,8 @@
 | Role | Frontend meaning |
 | --- | --- |
 | `USER` | 일반 사용자. 즐겨찾기와 웨이팅 등록/조회/취소 가능 |
-| `BOOTH_MANAGER` | 부스 관리자. 현재 구현된 전용 API는 아직 없음 |
-| `FESTIVAL_ADMIN` | 축제 관리자. 현재 구현된 전용 API는 아직 없음 |
+| `BOOTH_MANAGER` | 부스 관리자. 본인 부스 신청 상태 조회 가능 |
+| `FESTIVAL_ADMIN` | 축제 관리자. 부스 신청 목록/상세/승인/거절/삭제 가능 |
 
 현재 구현된 조회 API는 인증된 모든 role이 접근할 수 있다. `favorites`와 일반 사용자 `waitings` API는 `USER` role만 접근할 수 있다.
 
@@ -137,6 +137,7 @@ Enums:
 - `UserRole`: `USER`, `BOOTH_MANAGER`, `FESTIVAL_ADMIN`
 - `BoothType`: `DAY`, `NIGHT`, `FOOD_TRUCK`
 - `BoothCategory`: `ACTIVITY`, `INFO`, `MARKET`, `EXPERIENCE`, `PROMOTION`, `ALCOHOL`
+- `BoothApplicationStatus`: `PENDING`, `APPROVED`, `REJECTED`
 - `WaitingStatus`: `WAITING`, `CALLED`, `SEATED`, `CANCELLED`
 
 Common DTO snippets:
@@ -162,6 +163,21 @@ type BoothSummary = {
 type BoothDetail = BoothSummary & {
   description: string | null;
   operatingHours: string | null;
+};
+
+type BoothApplicationResponse = {
+  id: string;
+  festivalId: string;
+  applicantId: string;
+  boothName: string;
+  boothType: BoothType;
+  boothCategory: BoothCategory;
+  imageUrl: string | null;
+  description: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewMemo: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 ```
 
@@ -204,6 +220,72 @@ type BoothDetail = BoothSummary & {
 
 - Auth: any authenticated user
 - Response: `BoothDetail`
+
+### Booth Applications
+
+`POST /api/booth-applications`
+
+- Auth: public
+- Creates a `BOOTH_MANAGER` account and a `PENDING` booth application.
+- The response does not include a JWT. Use `POST /api/auth/login` with the created account to obtain a token.
+- Body:
+
+```json
+{
+  "id": "manager1",
+  "password": "Password1!",
+  "name": "Manager",
+  "phone": "01012345678",
+  "boothName": "Night Booth",
+  "boothType": "NIGHT",
+  "boothCategory": "ALCOHOL",
+  "imageUrl": "https://example.com/booth.png",
+  "description": "Booth description"
+}
+```
+
+- `boothCategory`, `imageUrl`, and `description` are optional. Omitted `boothCategory` defaults to `ACTIVITY`.
+- Response: `BoothApplicationResponse`
+
+`GET /api/booth-applications/me`
+
+- Auth: `BOOTH_MANAGER` or `FESTIVAL_ADMIN`
+- Response: `BoothApplicationResponse`
+
+`GET /api/admin/booth-applications`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `BoothApplicationResponse[]`
+
+`GET /api/admin/booth-applications/{applicationId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `BoothApplicationResponse`
+
+`POST /api/admin/booth-applications/{applicationId}/approve`
+
+- Auth: `FESTIVAL_ADMIN`
+- Approves a `PENDING` application and creates the managed booth.
+- Response: `BoothApplicationResponse`
+
+`POST /api/admin/booth-applications/{applicationId}/reject`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body is optional. Blank `reviewMemo` is stored as `null`.
+
+```json
+{
+  "reviewMemo": "Need more details"
+}
+```
+
+- Response: `BoothApplicationResponse`
+
+`DELETE /api/admin/booth-applications/{applicationId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `204 No Content`
+- `APPROVED` applications cannot be deleted and return `409 CONFLICT`.
 
 ### Menus
 
@@ -387,7 +469,7 @@ Backend rules:
 ## Frontend Agent Rules
 
 - Use `docs/API-ENDPOINTS.md` or `/v3/api-docs` as the endpoint boundary.
-- Do not add frontend calls to admin, booth manager, booth application, menu mutation, location mutation, or waiting call/status APIs until they appear in the implemented API docs.
+- Do not add frontend calls to menu mutation, location mutation, or waiting call/status APIs until they appear in the implemented API docs.
 - Treat `401` as a login/session recovery path.
 - Treat `403` as a role mismatch path.
 - Treat `404` on owner-scoped resources as "not visible or not found"; do not reveal ownership assumptions in UI copy.

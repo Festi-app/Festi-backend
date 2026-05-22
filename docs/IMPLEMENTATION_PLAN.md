@@ -4,11 +4,11 @@
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD와 `docs/PATCH.md`의 변경사항을 기준으로 도메인 모델, JWT 인증, 역할 기반 인가, 사용자 조회 API를 구성한다.
 
-현재 `main` 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, Swagger/OpenAPI 문서화까지 구현되어 있다.
+현재 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, 부스 신청/승인/삭제 워크플로우, Swagger/OpenAPI 문서화까지 구현되어 있다.
 
-남은 핵심 작업은 부스 신청/승인 워크플로우, 축제 관리자 변경 API, 부스 관리자 변경 API, 부스 관리자 웨이팅 운영/호출/알림 API, 그리고 현재 구현된 일반 사용자 API의 validation/test 보강이다.
+남은 핵심 작업은 축제 관리자 변경 API, 부스 관리자 변경 API, 부스 관리자 웨이팅 운영/호출/알림 API, 그리고 현재 구현된 일반 사용자 API의 validation/test 보강이다.
 
-이 문서는 현재 `main` 기준 구현 범위와 우선순위를 설명하며, 시점 의존적인 검증 이력과 세부 실행 로그는 별도 변경 이력 문서에서 관리한다.
+이 문서는 현재 체크아웃 기준 구현 범위와 우선순위를 설명하며, 시점 의존적인 검증 이력과 세부 실행 로그는 별도 변경 이력 문서에서 관리한다.
 
 | Priority | Scope | Status |
 | --- | --- | --- |
@@ -20,8 +20,8 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 | 6 | 모든 인증 사용자용 조회 API 구현 | Done |
 | 7 | PATCH 기반 도메인/migration 재정렬 | Done |
 | 8 | 일반 사용자 API 구현 | Done |
-| 9 | 부스 신청/승인/삭제 워크플로우 구현 | Next |
-| 10 | 축제 관리자 API 구현 | Pending |
+| 9 | 부스 신청/승인/삭제 워크플로우 구현 | Done |
+| 10 | 축제 관리자 API 구현 | Next |
 | 11 | 부스 관리자 API 구현 | Pending |
 | 12 | 부스 관리자 웨이팅 운영 + 알림 API 구현 | Pending |
 | 13 | controller/service/repository 테스트 보강 | In Progress |
@@ -409,9 +409,9 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 ## Priority 9: Booth Application Workflow
 
-부스 신청과 승인 워크플로우를 구현한다. 현재는 domain/repository/security route policy까지만 준비되어 있다.
+부스 신청과 승인 워크플로우가 구현되어 있다. 공개 신청 생성은 JWT 없이 가능하고, 생성된 `BOOTH_MANAGER` 계정은 기존 로그인 API로 JWT를 발급받는다.
 
-### APIs To Implement
+### Implemented APIs
 
 #### Permit All
 
@@ -440,6 +440,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 승인된 신청은 삭제할 수 없고 `409 Conflict`를 반환한다.
 - 승인 시 실제 `Booth`를 생성한다.
 - 승인된 신청의 manager 계정은 생성된 `Booth.manager`가 된다.
+- 승인/거절은 `PENDING` 상태에서만 가능하며, 이미 심사된 신청은 `409 Conflict`를 반환한다.
+- 거절 메모는 선택 입력이고 blank 값은 `null`로 정규화한다.
 - 거절된 신청은 승인 전 신청과 동일하게 삭제 가능 대상으로 본다.
 - 운영 중/운영 후 부스 삭제는 지원하지 않는다.
 
@@ -538,6 +540,9 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `AuthUserControllerIntegrationTest`
 - `UserDTOTest`
 - `UserServiceTest`
+- `BoothApplicationDTOTest`
+- `BoothApplicationServiceTest`
+- `BoothApplicationControllerIntegrationTest`
 - `HmacJwtTokenServiceTest`
 - `JwtAuthenticationConverterTest`
 - `SecurityExceptionHandlersTest`
@@ -554,16 +559,6 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 ### Tests To Add Or Expand
 
-- `BoothApplicationServiceTest`
-  - 신청 생성 시 `BOOTH_MANAGER` 계정 생성
-  - 승인 전 신청 삭제 시 신청과 계정 hard delete
-  - 승인된 신청 삭제 시 `409 Conflict`
-  - 승인 시 `Booth` 생성 및 manager 연결
-  - 거절 시 검토 메모 저장
-- `BoothApplicationControllerIntegrationTest`
-  - permit all 신청 endpoint
-  - 부스 관리자 본인 신청 조회
-  - 축제 관리자 신청 목록/상세/승인/거절/삭제
 - `FavoriteServiceTest`
   - 타입별 5개 제한
   - 생성 시각 정렬
@@ -623,10 +618,11 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
   - `FestivalController`
   - `FavoriteController`
   - `WaitingController`
+  - `BoothApplicationController`
 
 ### Follow-Up
 
-- Priority 9-12에서 새 controller를 추가할 때 같은 OpenAPI annotation 기준을 적용한다.
+- Priority 10-12에서 새 controller를 추가할 때 같은 OpenAPI annotation 기준을 적용한다.
 - 구현되지 않은 endpoint가 controller에 추가되면 `docs/API-ENDPOINTS.md`와 Swagger 설명을 함께 갱신한다.
 
 ## API Access Policy
@@ -639,7 +635,7 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `GET /v3/api-docs/**` - Implemented
 - `POST /api/auth/signup` - Implemented
 - `POST /api/auth/login` - Implemented
-- `POST /api/booth-applications` - Security policy only, controller pending
+- `POST /api/booth-applications` - Implemented
 
 ### All Authenticated Users
 
@@ -664,7 +660,7 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 
 ### Booth Manager
 
-- `GET /api/booth-applications/me` - Security policy only, controller pending
+- `GET /api/booth-applications/me` - Implemented
 - `PATCH /api/booths/{boothId}` - Security policy only, controller pending
 - `POST /api/booths/{boothId}/menus` - Security policy only, controller pending
 - `PATCH /api/booths/{boothId}/menus/{menuId}` - Security policy only, controller pending
@@ -690,11 +686,11 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `POST /api/locations/slots` - Security policy only, controller pending
 - `POST /api/locations/{locationId}/assignment` - Security policy only, controller pending
 - `DELETE /api/locations/{locationId}/assignment` - Security policy only, controller pending
-- `GET /api/admin/booth-applications` - Security policy only, controller pending
-- `GET /api/admin/booth-applications/{applicationId}` - Security policy only, controller pending
-- `POST /api/admin/booth-applications/{applicationId}/approve` - Security policy only, controller pending
-- `POST /api/admin/booth-applications/{applicationId}/reject` - Security policy only, controller pending
-- `DELETE /api/admin/booth-applications/{applicationId}` - Security policy only, controller pending
+- `GET /api/admin/booth-applications` - Implemented
+- `GET /api/admin/booth-applications/{applicationId}` - Implemented
+- `POST /api/admin/booth-applications/{applicationId}/approve` - Implemented
+- `POST /api/admin/booth-applications/{applicationId}/reject` - Implemented
+- `DELETE /api/admin/booth-applications/{applicationId}` - Implemented
 
 ## Scope Notes
 
