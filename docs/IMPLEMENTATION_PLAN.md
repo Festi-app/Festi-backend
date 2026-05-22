@@ -2,25 +2,27 @@
 
 ## Summary
 
-Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD를 기준으로 도메인 모델을 구성하고 JWT 기반 인증/인가를 적용한다.
+Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD와 `docs/PATCH.md`의 변경사항을 기준으로 도메인 모델, JWT 인증, 역할 기반 인가, 사용자 조회 API를 구성한다.
 
-현재 `main` 기준으로 공통 인프라, 도메인 모델, User/Auth/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API까지 구현되어 있다. 다만 `docs/PATCH.md`의 기획 변경으로 사용자 식별자, 축제별 계정, 부스 신청/삭제, 배치도, 즐겨찾기, 축제 일정/공지/공연, 웨이팅 정책을 재정렬해야 한다.
+현재 `main` 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 내 웨이팅 조회 API까지 구현되어 있다.
+
+남은 핵심 작업은 부스 신청/승인 워크플로우, 축제 관리자 변경 API, 부스 관리자 변경 API, 웨이팅 등록/취소/호출/알림 API, 그리고 해당 기능 테스트 보강이다.
 
 | Priority | Scope | Status |
 | --- | --- | --- |
 | 1 | Spring Boot/Gradle 프로젝트 생성, Java 25 설정, 테스트 워크플로우 수정 | Done |
 | 2 | 공통 설정: PostgreSQL, Flyway, JPA auditing, 공통 예외 응답, validation | Done |
-| 3 | ERD 기반 Entity, enum, Repository, migration 작성 | Done |
-| 4 | User/Auth/JWT 구현 | Done |
+| 3 | 초기 ERD 기반 Entity, enum, Repository, migration 작성 | Done |
+| 4 | PATCH 반영 User/Auth/JWT 구현 | Done |
 | 5 | SecurityConfig와 권한 체계 적용 | Done |
 | 6 | 모든 인증 사용자용 조회 API 구현 | Done |
-| 7 | PATCH 기반 도메인 재정렬 | Next |
-| 8 | 모든 인증 사용자 API 재정렬 + 일반 사용자 API 분리 | Pending |
-| 9 | 부스 신청/승인/삭제 워크플로우 구현 | Pending |
+| 7 | PATCH 기반 도메인/migration 재정렬 | Done |
+| 8 | 일반 사용자 API 구현 | Partial |
+| 9 | 부스 신청/승인/삭제 워크플로우 구현 | Next |
 | 10 | 축제 관리자 API 구현 | Pending |
 | 11 | 부스 관리자 API 구현 | Pending |
-| 12 | 웨이팅 + 알림 API 구현 | Pending |
-| 13 | controller/service/repository 테스트 보강 | Pending |
+| 12 | 웨이팅 명령 + 알림 API 구현 | Pending |
+| 13 | controller/service/repository 테스트 보강 | In Progress |
 
 ## Tech Stack
 
@@ -36,77 +38,40 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 - Flyway
 - JUnit 5 / Spring Boot Test / Spring Security Test
 
-## Priority 1: Project Initialization
+## Current Implementation Baseline
 
-Spring Boot 프로젝트의 실행 가능한 최소 구조를 만든다.
-
-- `com.festi.backend` 루트 패키지 생성
-- Gradle Wrapper 추가
-- Java toolchain을 Java 25로 설정
-- Spring Boot 4.0.x 의존성 구성
-- 기본 `FestiBackendApplication` 추가
-- `application.yml` 기본 설정 추가
-- GitHub Actions 테스트 워크플로우를 JDK 25 기준으로 수정
-- `./gradlew test`가 통과하는 최소 smoke test 추가
-
-## Priority 2: Common Infrastructure
-
-도메인 Entity와 API 구현 전에 모든 기능이 공유할 공통 기반을 고정한다.
-
-- PostgreSQL 연결 설정
-  - `FESTI_DATABASE_URL`
-  - `FESTI_DATABASE_USERNAME`
-  - `FESTI_DATABASE_PASSWORD`
-  - `ddl-auto: validate`
-  - `open-in-view: false`
-- 테스트 profile 설정
-  - `application-test.yml`
-  - H2 기반 context test
-- Flyway 기본 설정
-  - `src/main/resources/db/migration`
-  - baseline migration
-- JPA auditing
-  - `@EnableJpaAuditing`
-  - `BaseTimeEntity`
-- 공통 예외 처리
-  - `ErrorCode`
-  - `FestiException`
-  - `BadRequestException`
-  - `ConflictException`
-  - `NotFoundException`
-  - `GlobalExceptionHandler`
-- 공통 에러 응답
-  - `ErrorResponse`
-  - validation details는 민감 입력값 노출을 피하기 위해 rejected value를 포함하지 않는다.
-
-## Priority 3: Entity, Enum, Repository, Migration
-
-초기 ERD를 PostgreSQL 기준으로 구현했다. PATCH 이후 목표 모델은 Priority 7에서 재정렬한다.
-
-### 현재 구현된 Entities
+### Implemented Entities
 
 - `User`
-  - 현재: UUID `id`, `email`, `passwordHash`, `name`, `phone`, `role`, `createdAt`, `updatedAt`
-  - PATCH 이후: 축제별 로그인 ID 기반 계정으로 변경 예정
+  - `UserPK(festivalId, id)` composite primary key
+  - `festival`, `passwordHash`, `name`, `phone`, `role`, `createdAt`, `updatedAt`
+  - email 기반 로그인 정책은 제거됨
 - `Booth`
-  - 현재: `id`, `manager`, `createdBy`, `name`, `category`, `type`, `description`, `operatingHours`, `imageUrl`, `isActive`, `isWaitingOpen`, `createdAt`, `updatedAt`
-  - PATCH 이후: `isActive` 제거 예정
+  - `id`, `manager`, `name`, `category`, `type`, `description`, `operatingHours`, `imageUrl`, `isWaitingOpen`, `createdAt`, `updatedAt`
+  - `isActive`와 `createdBy`는 제거됨
 - `MenuItem`
   - `id`, `booth`, `name`, `price`, `description`, `imageUrl`, `isSoldOut`, `sortOrder`, `createdAt`, `updatedAt`
 - `BoothLocation`
-  - 현재: `id`, `booth`, `type`, `index`, `day`, `zoneLabel`, `createdAt`, `updatedAt`
-  - PATCH 이후: 축제별 슬롯, `zoneLabel + index + day` unique, 다중 슬롯 배정 지원 예정
+  - `id`, `festival`, nullable `booth`, `type`, nullable `index`, `day(FestivalDay)`, `zoneLabel`, `createdAt`, `updatedAt`
+  - unique 기준은 `festival_id + zone_label + index + festival_day_id`
 - `Waiting`
-  - `id`, `booth`, `user`, `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`
-- `BoothAdminAssignment`
-  - 현재 schema에는 남아 있으나 v1 권한 판정에서는 사용하지 않는다.
+  - `id`, `booth`, composite-key `user`, `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`
+- `Favorite`
+  - `id`, `festival`, `userId`, `booth`, `createdAt`
+  - unique 기준은 `festival_id + user_id + booth_id`
+- `BoothApplication`
+  - `id`, `festival`, `applicantId`, `boothName`, `boothType`, `boothCategory`, `imageUrl`, `description`, `status`, `reviewMemo`, `createdAt`, `updatedAt`
 - `Festival`
   - `id`, `name`, `startDate`, `endDate`, `description`, `createdAt`, `updatedAt`
+- `FestivalDay`
+  - `id`, `festival`, `day`, `dayStart`, `dayEnd`, `nightStart`, `nightEnd`, `createdAt`, `updatedAt`
 - `Notice`
-  - 현재: `id`, `festival`, `title`, `content`, `createdBy`, `createdAt`, `updatedAt`
-  - PATCH 이후: `pinned` 추가, 유형 필드는 추가하지 않는다.
+  - `id`, `festival`, `title`, `content`, `pinned`, `createdAt`, `updatedAt`
+  - `createdBy`와 notice type은 없음
+- `Timeline`
+  - `id`, `festival`, `day`, `title`, `artist`, `startTime`, `endTime`, `createdAt`, `updatedAt`
 
-### 현재 구현된 Enums
+### Implemented Enums
 
 - `UserRole`
   - `USER`
@@ -120,273 +85,321 @@ Spring Boot 프로젝트의 실행 가능한 최소 구조를 만든다.
   - `PROMOTION`
   - `ALCOHOL`
 - `BoothType`
-  - 현재: `DAY`, `NIGHT`
-  - PATCH 이후: `FOOD_TRUCK` 추가 예정
+  - `DAY`
+  - `NIGHT`
+  - `FOOD_TRUCK`
 - `WaitingStatus`
   - `WAITING`
   - `CALLED`
   - `SEATED`
   - `CANCELLED`
+- `BoothApplicationStatus`
+  - `PENDING`
+  - `APPROVED`
+  - `REJECTED`
 
-### 현재 구현된 Repositories
+### Implemented Repositories
 
 - `UserRepository`
-  - 현재: `findByEmail`, `existsByEmail`
-  - PATCH 이후: 축제별 로그인 ID 기반 조회로 변경 예정
+  - `findByIdAndFestivalId`
+  - `existsByIdAndFestivalId`
 - `BoothRepository`
-  - 현재: type/category/active 기반 조회
-  - PATCH 이후: active 조건 제거 예정
+  - `findByTypeAndCategory`
+  - `findByType`
+  - `findByCategory`
 - `MenuItemRepository`
   - `findByBoothIdOrderBySortOrder`
 - `BoothLocationRepository`
-  - 현재: `findByDayAndTypeOrderByIndex`
-  - PATCH 이후: 축제와 zone/index 기준 조회로 변경 예정
+  - `findByDayAndTypeOrderByIndex`
+  - `findByDayOrderByIndex`
 - `WaitingRepository`
-  - `findByUserId`
+  - `findByUserIdAndFestivalId`
+  - `findByUserIdAndFestivalIdOrderByRegisteredAtDesc`
   - `findByBoothIdAndStatusOrderByRegisteredAt`
-- `BoothAdminAssignmentRepository`
-  - 현재 schema에는 남아 있으나 v1 권한 판정에서는 사용하지 않는다.
+- `FavoriteRepository`
+  - `findByFestivalIdAndUserIdOrderByCreatedAtDesc`
+  - `existsByFestivalIdAndUserIdAndBoothId`
+  - `countByFestivalIdAndUserIdAndBoothType`
+- `BoothApplicationRepository`
+  - `findByFestivalId`
+  - `findByFestivalIdAndApplicantId`
 - `FestivalRepository`
+- `FestivalDayRepository`
+  - `findByFestivalIdOrderByDay`
+  - `findByFestivalIdAndDay`
 - `NoticeRepository`
+  - `findByFestivalIdOrderByPinnedDescCreatedAtDesc`
+- `TimelineRepository`
+  - `findByFestivalIdOrderByDayAscStartTimeAsc`
+
+`BoothAdminAssignmentRepository`와 `booth_admin_assignments` table은 PATCH 재정렬 후 제거되었다. v1 부스 관리자 소유권은 `booths.manager_id`를 기준으로 판단한다.
+
+### Implemented Migrations
+
+- `V1__baseline.sql`
+- `V2__init_schema.sql`
+- `V3__users_phone_not_null.sql`
+- `V4__domain_realignment.sql`
+  - `booth_type`에 `FOOD_TRUCK` 추가
+  - `users`를 `festival_id + id` composite PK로 재구성
+  - `users.email`, `booths.is_active`, `booths.created_by`, `notices.created_by` 제거
+  - `booths.manager`와 `waitings.user`를 composite user FK로 재구성
+  - `booth_admin_assignments` table 제거
+  - `notices.pinned` 추가
+  - `festival_days`, `timelines`, `booth_applications`, `favorites` table 추가
+  - `booth_locations`를 `festival_day_id` 기반 슬롯 모델로 재구성
+
+## Priority 1: Project Initialization
+
+Spring Boot 프로젝트의 실행 가능한 최소 구조를 만들었다.
 
 ### Completed Deliverables
 
-- `User`, `Booth`, `MenuItem`, `BoothLocation`, `Waiting`, `BoothAdminAssignment`, `Festival`, `Notice` Entity와 관련 enum 구현
-- 8개 JPA Repository 구현
+- `com.festi.backend` 루트 패키지 생성
+- Gradle Wrapper 추가
+- Java toolchain을 Java 25로 설정
+- Spring Boot 4.0.x 의존성 구성
+- 기본 `FestiBackendApplication` 추가
+- `application.yml` 기본 설정 추가
+- GitHub Actions 테스트 워크플로우를 JDK 25 기준으로 수정
+- 최소 smoke test 추가
+
+## Priority 2: Common Infrastructure
+
+도메인 Entity와 API 구현 전에 모든 기능이 공유할 공통 기반을 고정했다.
+
+### Completed Deliverables
+
+- PostgreSQL 연결 설정
+  - `FESTI_DATABASE_URL`
+  - `FESTI_DATABASE_USERNAME`
+  - `FESTI_DATABASE_PASSWORD`
+  - `ddl-auto: validate`
+  - `open-in-view: false`
+- 테스트 profile 설정
+  - `application-test.yml`
+  - H2 기반 context test
+- Flyway migration 구조
+- JPA auditing
+  - `@EnableJpaAuditing`
+  - `BaseTimeEntity`
+- 공통 예외 처리
+  - `ErrorCode`
+  - `FestiException`
+  - `BadRequestException`
+  - `ConflictException`
+  - `NotFoundException`
+  - `GlobalExceptionHandler`
+- 공통 에러 응답
+  - `ErrorResponse`
+  - validation details는 민감 입력값 노출을 피하기 위해 rejected value를 포함하지 않음
+
+## Priority 3: Initial Entity, Enum, Repository, Migration
+
+초기 ERD 기준 Entity, enum, repository, PostgreSQL migration을 구현했다. 이후 `V4__domain_realignment.sql`에서 PATCH 기반 모델로 재정렬했다.
+
+### Completed Deliverables
+
+- 초기 Entity와 enum 구현
+- 초기 JPA Repository 구현
 - PostgreSQL schema migration `V2__init_schema.sql`
 - 사용자 스키마 보강 migration `V3__users_phone_not_null.sql`
 - Lombok 기반 Entity/Common 클래스 보일러플레이트 정리
 - 테스트를 H2 fast test(`./gradlew test`)와 PostgreSQL migration test(`./gradlew postgresTest`)로 분리
 
-## Priority 4: User/Auth/JWT
+## Priority 4: PATCH-Aligned User/Auth/JWT
 
-현재는 email 기반 회원가입, 로그인, 본인 정보 API가 구현되어 있다. PATCH 이후에는 축제별 로그인 ID 기반 인증으로 재정렬한다.
+축제별 로그인 ID 기반 회원가입, 로그인, 본인 정보 API가 구현되어 있다.
 
-- 현재 구현
-  - `POST /api/auth/signup`
-  - `POST /api/auth/login`
-  - `GET /api/users/me`
-  - `PATCH /api/users/me`
-  - `DELETE /api/users/me`
-  - 회원가입 시 기본 role은 `USER`
+### Current Behavior
+
+- `POST /api/auth/signup`
+  - request: `id`, `password`, `name`, `phone`
+  - 기본 role은 `USER`
   - 비밀번호는 BCrypt hash로 저장
+  - 같은 축제 안에서 `id` 중복 시 `409`
+- `POST /api/auth/login`
+  - request: `id`, `password`
   - 로그인 성공 시 JWT access token 발급
-- PATCH 이후 변경
-  - 회원가입 필드는 `id`, `password`, `phone`, `name`으로 변경한다.
-  - 기존 email 로그인 정책은 제거한다.
-  - 사용자 계정은 축제에 bound된다.
-  - 같은 로그인 ID라도 축제가 다르면 별도 계정으로 취급한다.
-  - JWT subject는 축제별 사용자 식별자를 표현해야 한다.
-  - JWT claim에는 사용자 role과 festival 식별자를 포함한다.
-  - refresh token은 v1 범위에서 제외한다.
+- `GET /api/users/me`
+- `PATCH /api/users/me`
+  - 현재 수정 가능 필드는 `name`, `phone`
+- JWT claim
+  - `sub`: 사용자 로그인 ID
+  - `festivalId`: 축제 ID
+  - `role`: `UserRole`
+- malformed `role`, malformed `festivalId`, missing subject/required claim은 `401 AUTHENTICATION_REQUIRED`로 처리한다.
+
+### Current Limitation
+
+- 회원가입/로그인은 현재 단일 축제 운영을 전제로 첫 번째 `Festival` row를 사용한다. 다중 축제 선택 또는 축제별 로그인 context 전달은 아직 구현되지 않았다.
+- 총 관리자 계정 `admin / pw` 사전 생성은 아직 구현되지 않았다.
+- refresh token은 v1 범위에서 제외한다.
 
 ### Completed Deliverables
 
 - `AuthDTO`, `UserDTO` 구현
 - `AuthController`, `UserController` 구현
 - `AuthService`, `UserService` 구현
+- `UserPK` composite primary key 적용
 - JWT 발급/변환 계층 구현
 - DTO / service / JWT converter / JWT issuance / security exception handler 테스트 추가
 
 ## Priority 5: Security and Authorization
 
-Spring Security 기반 인증/인가 구조를 확정했다. PATCH 이후에는 모든 인증 사용자 API와 일반 사용자 전용 API를 분리한다.
+Spring Security 기반 인증/인가 구조를 적용했다.
 
-- 현재 구현
-  - 회원가입/로그인만 `permitAll`
-  - 조회 API와 본인 정보 API는 `authenticated`
-  - 축제 관리자 API는 `FESTIVAL_ADMIN`
-  - 부스 관리자 API는 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` coarse gate
-  - 부스 관리자 권한은 role만 보지 않고 `booths.manager_id`와 현재 사용자 일치를 검증
-  - `FESTIVAL_ADMIN`은 부스 관리자 권한도 통과
-  - 문서에 정의되지 않은 라우트는 기본 `denyAll`
+### Current Behavior
 
-- PATCH 이후 권한 계층
-  - `Permit All`: 로그인, 일반 사용자 회원가입, 부스 신청 + 부스 관리자 회원가입
-  - `All Authenticated Users`: 축제 정보, 공지, 공연 타임라인, 부스/메뉴/배치도 조회, 내 정보 조회/수정
-  - `General User Only`: 즐겨찾기, 웨이팅 등록/취소/내 웨이팅 조회
-  - `Booth Manager`: 본인 담당 부스 수정, 메뉴 관리, 담당 부스 웨이팅 관리
-  - `Festival Admin`: 축제 설정, 축제 일자/운영시간, 배치도 슬롯 생성/배정, 부스 신청 승인/거절, 공지/공연 관리
+- 회원가입/로그인은 `permitAll`
+- `POST /api/booth-applications`는 보안 정책상 `permitAll`이지만 아직 controller는 없다.
+- 모든 인증 사용자 조회 API와 본인 정보 API는 `authenticated`
+- 일반 사용자 전용 API는 `ROLE_USER`
+- 축제 관리자 API는 `ROLE_FESTIVAL_ADMIN`
+- 부스 관리자 API는 `ROLE_BOOTH_MANAGER` 또는 `ROLE_FESTIVAL_ADMIN` coarse gate
+- 부스 관리자 권한은 role만 보지 않고 `booths.manager_id`와 현재 사용자 ID 일치를 검증한다.
+- `FESTIVAL_ADMIN`은 부스 관리자 권한도 통과한다.
+- 문서에 정의되지 않은 라우트는 기본 `denyAll`
 
 ### Completed Deliverables
 
 - `SecurityConfig`에 API Access Policy 반영
+- `AuthenticatedUser`
+  - `id`
+  - `festivalId`
+  - `role`
 - `BoothAuthorizationService`
   - `AuthenticatedUser`와 `Booth` 엔티티를 기준으로 부스 소유권 검증
   - `FESTIVAL_ADMIN` 우회 허용
   - `BOOTH_MANAGER`는 `booths.manager_id`와 현재 사용자 id가 일치할 때만 허용
-  - `BoothAdminAssignmentRepository`는 v1 권한 판정에서 미사용
 - `SecurityRoutePolicyIntegrationTest`
 - `BoothAuthorizationServiceTest`
 
 ## Priority 6: All Authenticated Read APIs
 
-모든 인증 사용자가 조회할 수 있는 API를 구현했다. 기존 문서의 “일반 사용자 이상” 표현은 PATCH 이후 “모든 인증 사용자”로 정규화한다.
+모든 인증 사용자가 조회할 수 있는 API를 구현했다.
+
+### Implemented APIs
 
 - `GET /api/booths`
   - 선택 필터: `day`, `type`, `category`
+  - `day`가 있으면 `FestivalDay`와 `BoothLocation` 기반으로 배치된 부스를 조회한다.
+  - `day`가 없으면 `type`, `category` 기반으로 부스를 조회한다.
 - `GET /api/booths/{boothId}`
 - `GET /api/booths/{boothId}/menus`
 - `GET /api/locations`
   - 필수 필터: `day`, `type`
+  - 배정되지 않은 slot도 응답에 포함할 수 있다.
 - `GET /api/festival`
 - `GET /api/festival/notices`
+  - `pinned` 우선, 같은 그룹 안에서는 최신순
+- `GET /api/festival/timelines`
+  - 축제 일자, 시작 시간 순
+- `GET /api/users/me`
+- `PATCH /api/users/me`
 
 ### Completed Deliverables
 
 - 조회 전용 DTO / Service / Controller 구현
-  - `BoothDTO`, `MenuDTO`, `LocationDTO`, `FestivalDTO`, `NoticeDTO`, `WaitingDTO`
+  - `BoothDTO`, `MenuDTO`, `LocationDTO`, `FestivalDTO`, `FestivalDayDTO`, `NoticeDTO`, `TimelineDTO`, `WaitingDTO`
 - 조회 API 구현
   - 부스 목록 / 상세 / 메뉴
   - 배치도
-  - 축제 정보 / 공지사항
+  - 축제 정보 / 공지사항 / 공연 타임라인
+  - 본인 정보 조회/수정
 - 조회 정책 반영
   - 부스 목록은 `day`, `type`, `category` 조합 필터 지원
   - 배치도는 `day`, `type` 필수
-  - 공지사항은 최신순
   - 목록은 빈 배열, 단건은 미존재 시 `404`
 
 ## Priority 7: PATCH-Based Domain Realignment
 
-`docs/PATCH.md`의 변경사항을 반영해 도메인과 migration을 먼저 재정렬한다. 이 단계는 이후 API 구현 전에 반드시 선행한다.
+`docs/PATCH.md`의 변경사항을 반영해 도메인과 migration을 재정렬했다.
 
-### User / Auth
+### Completed Deliverables
 
-- UUID 기반 `User.id`와 email 로그인 정책을 폐기한다.
-- 사용자 로그인 ID 문자열을 사용자 식별자로 사용한다.
-- 계정은 축제에 bound된다.
-- 동일 로그인 ID는 축제가 다르면 별도 계정으로 취급한다.
-- DB 식별 기준은 `festival_id + user_id` 조합으로 설계한다.
-- 사용자 FK를 가진 테이블은 축제별 사용자 식별자를 참조하도록 재설계한다.
-- 회원가입 필드는 다음 4가지다.
-  - `id`: 로그인 ID
-  - `password`: BCrypt hash 저장
-  - `phone`: 웨이팅 연락용 전화번호
-  - `name`: 일반 사용자는 사용자 이름, 부스 관리자는 대표자 이름
-- 총 관리자 계정은 각 축제에 bound된 `admin / pw` 계정으로 사전 생성한다.
-- `UserRole`은 유지한다.
-  - `USER`
-  - `BOOTH_MANAGER`
-  - `FESTIVAL_ADMIN`
+- User/Auth
+  - UUID 기반 `User.id`와 email 로그인 정책 제거
+  - 사용자 로그인 ID 문자열을 사용자 식별자로 사용
+  - `festival_id + id` composite primary key 적용
+  - 사용자 FK를 가진 테이블은 축제별 사용자 식별자를 참조하도록 재설계
+- Booth / BoothApplication
+  - `Booth.active` / `is_active` 제거
+  - `BoothRepository`의 active 기반 조회 제거
+  - `BoothApplication` entity, enum, repository, table 추가
+  - `BoothApplicationStatus`는 `PENDING`, `APPROVED`, `REJECTED`
+- Booth / Food Truck / Location
+  - `BoothType.FOOD_TRUCK` 추가
+  - 푸드트럭은 내부적으로 `Booth`로 표현
+  - `BoothLocation`을 축제별 `FestivalDay` slot 모델로 재구성
+  - 여러 `BoothLocation` row가 같은 `booth_id`를 가질 수 있는 구조 반영
+- Favorite
+  - `Favorite` entity, repository, table 추가
+  - 사용자당 부스 중복 즐겨찾기 방지 unique 제약 추가
+  - 생성 시각 기록
+- Festival / Notice / Timeline
+  - `FestivalDay` entity, repository, table 추가
+  - `Notice.pinned` 추가
+  - `Timeline` entity, repository, table 추가
+- Waiting
+  - `Waiting.user`를 축제별 composite user FK로 재구성
+  - 사용자별 웨이팅 조회 repository 추가
 
-### Booth / BoothApplication
+### Current Limitation
 
-- `Booth.active` / `is_active`는 제거한다.
-- `BoothRepository`의 active 기반 조회 메서드를 제거한다.
-- 부스 조회 서비스는 active 조건 없이 조회하되, 승인된 `Booth`만 생성되는 구조로 보장한다.
-- 신청 시점에는 `Booth`가 아니라 `BoothApplication`을 생성한다.
-- 부스 관리자 계정은 `BoothApplication` 생성과 동시에 만들어진다.
-- `BoothApplication`은 최소한 다음 정보를 가진다.
-  - 축제
-  - 신청자/대표자 계정
-  - 부스명
-  - 부스 타입
-  - 부스 카테고리
-  - 이미지 URL optional
-  - 설명 optional
-  - 신청 상태: `PENDING`, `APPROVED`, `REJECTED`
-  - 검토 메모 optional
-- 신청 삭제는 승인 전 `BoothApplication`에만 허용한다.
-- 신청 삭제 시 연결된 `BOOTH_MANAGER` 계정도 hard delete한다.
-- 승인 후에는 실제 `Booth`를 생성하고 manager를 신청 시 생성된 `BOOTH_MANAGER` 계정으로 배정한다.
-- 승인된 `Booth`의 삭제 API는 제공하지 않는다.
-- 기존 `DELETE /api/booths/{boothId}` 계획은 제거하고, 승인 전 신청 삭제 API로 대체한다.
+- `BoothApplication`은 domain/repository/migration만 구현되어 있고 신청/승인/거절/삭제 service/controller는 아직 없다.
+- 배치도 slot 생성/배정/취소 API는 아직 없다.
+- 푸드트럭 manager를 축제 관리자 계정으로 배정하는 생성 로직은 아직 없다.
+- 웨이팅 등록/취소/호출/상태 변경/알림 로직은 아직 없다.
 
-### Booth / Food Truck / Location
+## Priority 8: General User APIs
 
-- `BoothType`에 `FOOD_TRUCK`을 추가한다.
-- 푸드트럭은 내부적으로 `Booth`로 표현한다.
-- 푸드트럭 manager는 해당 축제의 `FESTIVAL_ADMIN` 계정으로 배정한다.
-- 부스는 여러 연속 칸에 배치될 수 있다.
-- 여러 `BoothLocation` row가 같은 `booth_id`를 가질 수 있다.
-- `BoothLocation`은 축제별 슬롯이다.
-- `BoothLocation` unique 기준은 `festival_id + zone_label + index + day`다.
-- 프론트가 구역별 칸 수 정보를 전달하면 백엔드가 이를 기반으로 `BoothLocation` 슬롯을 생성한다.
-- 이미 배정된 슬롯에는 다른 부스를 직접 덮어쓸 수 없다. 먼저 배정을 취소해야 한다.
+일반 사용자 전용 API 중 즐겨찾기와 내 웨이팅 조회가 구현되어 있다.
 
-### Favorite
-
-- `Favorite` 도메인을 추가한다.
-- 일반 사용자만 즐겨찾기를 사용할 수 있다.
-- 사용자당 `DAY`, `NIGHT`, `FOOD_TRUCK` 각각 5개까지 등록할 수 있다.
-- 정렬 순서를 위해 즐겨찾기 생성 시점을 기록한다.
-- 즐겨찾기 삭제는 hard delete다.
-
-### Festival / Notice / Timeline
-
-- `FestivalDay` 도메인을 추가한다.
-- 각 축제 일자별 주간/야간 운영 시간대를 설정한다.
-- `Notice`에는 유형 필드를 두지 않는다.
-- 공지 상세보기 페이지는 제공하지 않는 전제이므로 목록 응답에 title/content를 함께 제공한다.
-- `Notice.pinned`를 추가한다.
-- 상단 고정은 여러 개 가능하다.
-- 공지 정렬은 pinned 우선, 같은 그룹 안에서는 작성일 순으로 한다.
-- `Timeline` 도메인을 추가한다.
-- 공연 시간표는 축제 일자별로 관리한다.
-- `Timeline` 필드는 다음을 포함한다.
-  - 공연명
-  - 아티스트 또는 팀명
-  - 공연 시작 시간
-  - 공연 종료 시간
-
-### Waiting
-
-- 사용자당 최대 3개까지 웨이팅을 등록할 수 있다.
-- 웨이팅은 `NIGHT` 부스에서만 가능하다.
-- `FOOD_TRUCK`은 웨이팅 대상이 아니다.
-- 웨이팅 정보 갱신은 사용자의 화면 새로고침 기반이다.
-- 웨이팅 호출 알림은 서버에서 사용자 앱으로 전송한다.
-
-## Priority 8: All Authenticated APIs and General User APIs
-
-Priority 6에서 구현된 조회 API를 PATCH 이후 권한 모델과 응답 모델에 맞게 재정렬하고, 일반 사용자 전용 API를 추가한다.
-
-### All Authenticated Users
-
-- `GET /api/booths`
-- `GET /api/booths/{boothId}`
-- `GET /api/booths/{boothId}/menus`
-- `GET /api/locations`
-- `GET /api/festival`
-- `GET /api/festival/notices`
-- `GET /api/festival/timelines`
-- `GET /api/users/me`
-- `PATCH /api/users/me`
-
-### General User Only
+### Implemented APIs
 
 - `POST /api/favorites`
+  - `USER`만 접근 가능
+  - 같은 부스 중복 등록 시 `409`
+  - 부스 타입별 최대 5개 제한
 - `GET /api/favorites`
+  - `USER`만 접근 가능
+  - 생성 시각 역순 조회
 - `DELETE /api/favorites/{favoriteId}`
+  - `USER`만 접근 가능
+  - 본인 즐겨찾기만 hard delete
+- `GET /api/waitings`
+  - `USER`만 접근 가능
+  - 현재 사용자와 축제 ID 기준 조회
+  - `booth` fetch plan 적용
+
+### Remaining Work
+
 - `POST /api/booths/{boothId}/waitings`
 - `DELETE /api/waitings/{waitingId}`
-- `GET /api/waitings`
-
-검증 규칙:
-
-- `USER`만 일반 사용자 전용 API를 호출할 수 있다.
-- `BOOTH_MANAGER`와 `FESTIVAL_ADMIN`은 일반 사용자 전용 API에서 `403`이다.
-- 즐겨찾기는 부스 타입별 최대 5개 제한을 적용한다.
-- 즐겨찾기 목록은 생성 시각 기준으로 정렬한다.
-- 즐겨찾기 삭제는 hard delete다.
+- 즐겨찾기 request validation 보강
+- `FavoriteServiceTest` / favorite controller integration test 추가
+- 웨이팅 등록/취소 정책 테스트 추가
 
 ## Priority 9: Booth Application Workflow
 
-부스 신청과 승인 워크플로우를 구현한다.
+부스 신청과 승인 워크플로우를 구현한다. 현재는 domain/repository/security route policy까지만 준비되어 있다.
 
-### Permit All
+### APIs To Implement
+
+#### Permit All
 
 - `POST /api/booth-applications`
   - 부스 관리자 회원가입과 부스 신청을 동시에 처리한다.
   - 성공 시 `BOOTH_MANAGER` 계정과 `BoothApplication`을 함께 생성한다.
   - 신청 상태는 `PENDING`으로 시작한다.
 
-### Booth Manager
+#### Booth Manager
 
 - `GET /api/booth-applications/me`
   - 현재 부스 관리자 계정의 신청 상태를 조회한다.
 
-### Festival Admin
+#### Festival Admin
 
 - `GET /api/admin/booth-applications`
 - `GET /api/admin/booth-applications/{applicationId}`
@@ -394,19 +407,21 @@ Priority 6에서 구현된 조회 API를 PATCH 이후 권한 모델과 응답 �
 - `POST /api/admin/booth-applications/{applicationId}/reject`
 - `DELETE /api/admin/booth-applications/{applicationId}`
 
-검증 규칙:
+### Validation Rules
 
 - 승인 전 신청만 삭제할 수 있다.
 - 신청 삭제 시 신청과 함께 생성된 `BOOTH_MANAGER` 계정도 hard delete한다.
 - 승인된 신청은 삭제할 수 없고 `409 Conflict`를 반환한다.
 - 승인 시 실제 `Booth`를 생성한다.
 - 승인된 신청의 manager 계정은 생성된 `Booth.manager`가 된다.
-- 거절된 신청은 삭제 가능 여부를 승인 전과 동일하게 본다.
+- 거절된 신청은 승인 전 신청과 동일하게 삭제 가능 대상으로 본다.
 - 운영 중/운영 후 부스 삭제는 지원하지 않는다.
 
 ## Priority 10: Festival Admin APIs
 
-축제 관리자 권한이 필요한 API를 구현한다.
+축제 관리자 권한이 필요한 API를 구현한다. 현재는 `SecurityConfig` route policy만 적용되어 있고 controller/service는 없다.
+
+### APIs To Implement
 
 - `PATCH /api/festival`
 - `POST /api/festival/days`
@@ -422,7 +437,7 @@ Priority 6에서 구현된 조회 API를 PATCH 이후 권한 모델과 응답 �
 - `POST /api/locations/{locationId}/assignment`
 - `DELETE /api/locations/{locationId}/assignment`
 
-검증 규칙:
+### Validation Rules
 
 - 공지는 pinned 여러 개를 허용한다.
 - 공지 목록은 pinned 우선, 같은 그룹 안에서는 작성일 순으로 정렬한다.
@@ -433,7 +448,9 @@ Priority 6에서 구현된 조회 API를 PATCH 이후 권한 모델과 응답 �
 
 ## Priority 11: Booth Manager APIs
 
-부스 관리자 권한이 필요한 API를 구현한다. `BOOTH_MANAGER` role을 유지하되, 담당 부스 소유권도 함께 검증한다.
+부스 관리자 권한이 필요한 API를 구현한다. 현재는 `SecurityConfig` route policy와 `BoothAuthorizationService`만 준비되어 있고 controller/service는 없다.
+
+### APIs To Implement
 
 - `PATCH /api/booths/{boothId}`
 - `POST /api/booths/{boothId}/menus`
@@ -441,34 +458,36 @@ Priority 6에서 구현된 조회 API를 PATCH 이후 권한 모델과 응답 �
 - `DELETE /api/booths/{boothId}/menus/{menuId}`
 - `POST /api/booths/{boothId}/menus/{menuId}/sold-out`
 
-검증 규칙:
+### Validation Rules
 
 - `BOOTH_MANAGER`는 본인 담당 부스만 수정할 수 있다.
 - `FESTIVAL_ADMIN`은 부스 관리자 API를 우회 통과할 수 있다.
 - 메뉴 생성/수정은 `NIGHT` 부스에서만 허용한다.
 - `FOOD_TRUCK`은 내부적으로 `Booth`지만 부스 관리자 계정이 아닌 축제 관리자 계정이 manager다.
 
-## Priority 12: Waiting APIs and Notifications
+## Priority 12: Waiting Commands and Notifications
 
-웨이팅 기능과 호출 알림을 구현한다.
+현재는 `GET /api/waitings` 내 웨이팅 조회만 구현되어 있다. 웨이팅 등록, 취소, 부스 관리자용 조회/호출/상태 변경, 알림 전송은 아직 구현되지 않았다.
 
-### General User Only
+### APIs To Implement
+
+#### General User Only
 
 - `POST /api/booths/{boothId}/waitings`
 - `DELETE /api/waitings/{waitingId}`
-- `GET /api/waitings`
 
-### Booth Manager
+#### Booth Manager
 
 - `GET /api/booths/{boothId}/waitings`
 - `POST /api/waitings/{waitingId}/call`
 - `PATCH /api/waitings/{waitingId}/status`
 - `PATCH /api/booths/{boothId}/waitings/status`
 
-검증 규칙:
+### Validation Rules
 
 - 웨이팅 등록은 `USER`만 가능하다.
 - 웨이팅은 `NIGHT` 부스에만 등록할 수 있다.
+- `FOOD_TRUCK`은 웨이팅 대상이 아니다.
 - 사용자당 최대 3개까지 웨이팅을 등록할 수 있다.
 - 부스의 웨이팅이 open 상태일 때만 등록할 수 있다.
 - 웨이팅 취소는 본인만 가능하다.
@@ -479,55 +498,70 @@ Priority 6에서 구현된 조회 API를 PATCH 이후 권한 모델과 응답 �
 
 ## Priority 13: Test Coverage
 
-기능별 단위/통합 테스트를 보강한다.
+현재 구현된 slice에 대한 단위/통합 테스트가 추가되어 있다. 남은 API 구현 시 각 service/controller/security 경계를 함께 보강한다.
 
+### Current Tests
+
+- `FestiBackendApplicationTests`
+- `PostgresMigrationApplicationTests`
+- `AuthDTOTest`
 - `AuthServiceTest`
-  - 로그인 ID 기반 일반 사용자 회원가입
-  - 부스 신청과 동시에 부스 관리자 계정 생성
-  - 축제별 계정 분리
-  - 중복 로그인 ID는 같은 축제 안에서만 충돌
-  - 비밀번호 hash 저장
-  - 로그인 성공/실패
-  - JWT claim 검증
+- `AuthUserControllerIntegrationTest`
+- `UserDTOTest`
+- `UserServiceTest`
+- `HmacJwtTokenServiceTest`
+- `JwtAuthenticationConverterTest`
+- `SecurityExceptionHandlersTest`
 - `SecurityRoutePolicyIntegrationTest`
-  - permit all endpoint 접근
-  - 모든 인증 사용자 endpoint 접근
-  - 일반 사용자 전용 endpoint에 `BOOTH_MANAGER` / `FESTIVAL_ADMIN` 접근 시 `403`
-  - 부스 관리자 endpoint에 일반 사용자 접근 시 `403`
-  - 축제 관리자 endpoint에 일반/부스 관리자 접근 시 `403`
-  - 문서화되지 않은 endpoint는 `denyAll`
+- `BoothAuthorizationServiceTest`
+- `BoothServiceTest`
+- `MenuServiceTest`
+- `LocationServiceTest`
+- `FestivalServiceTest`
+- `WaitingServiceTest`
+- `RepositoryFetchPlanTest`
+- `GlobalExceptionHandlerTest`
+- `ErrorResponseTest`
+
+### Tests To Add Or Expand
+
 - `BoothApplicationServiceTest`
   - 신청 생성 시 `BOOTH_MANAGER` 계정 생성
   - 승인 전 신청 삭제 시 신청과 계정 hard delete
   - 승인된 신청 삭제 시 `409 Conflict`
   - 승인 시 `Booth` 생성 및 manager 연결
   - 거절 시 검토 메모 저장
-- `BoothServiceTest`
-  - `active` 제거 후 목록/상세 조회
-  - `FOOD_TRUCK` 타입 조회
-  - 담당 부스 수정 권한
+- `BoothApplicationControllerIntegrationTest`
+  - permit all 신청 endpoint
+  - 부스 관리자 본인 신청 조회
+  - 축제 관리자 신청 목록/상세/승인/거절/삭제
 - `FavoriteServiceTest`
   - 타입별 5개 제한
   - 생성 시각 정렬
   - hard delete
-  - 일반 사용자 외 role 접근 차단
-- `MenuServiceTest`
+  - 중복 등록 차단
+- `FavoriteControllerIntegrationTest`
+  - `USER` 접근 허용
+  - `BOOTH_MANAGER` / `FESTIVAL_ADMIN` 접근 시 `403`
+- `BoothServiceTest` 확장
+  - 담당 부스 수정 권한
+  - `FOOD_TRUCK` 타입 조회/관리자 배정
+- `MenuServiceTest` 확장
   - 야간 부스 메뉴 생성 성공
   - 주간 부스 메뉴 생성 실패
   - 품절 처리
-- `LocationServiceTest`
+- `LocationServiceTest` 확장
   - 구역별 슬롯 생성
-  - `festival_id + zone_label + index + day` unique 검증
+  - `festival_id + zone_label + index + festival_day_id` unique 검증
   - 여러 슬롯에 같은 부스 배정
   - 이미 배정된 슬롯 중복 배정 실패
   - 배정 취소
-- `FestivalServiceTest`
-  - 축제 정보 조회/수정
+- `FestivalServiceTest` 확장
+  - 축제 정보 수정
   - 축제 일자별 주간/야간 운영 시간 관리
   - 공지 등록/수정/삭제/조회
-  - pinned 우선 및 작성일 순 정렬
   - 공연 타임라인 등록/수정/삭제/조회
-- `WaitingServiceTest`
+- `WaitingServiceTest` 확장
   - 일반 사용자 웨이팅 등록
   - 일반 사용자 외 role 등록 실패
   - 사용자당 최대 3개 제한
@@ -544,74 +578,75 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 
 ### Permit All
 
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
-- `POST /api/booth-applications`
+- `POST /api/auth/signup` - Implemented
+- `POST /api/auth/login` - Implemented
+- `POST /api/booth-applications` - Security policy only, controller pending
 
 ### All Authenticated Users
 
-- `GET /api/booths`
-- `GET /api/booths/{boothId}`
-- `GET /api/booths/{boothId}/menus`
-- `GET /api/locations`
-- `GET /api/festival`
-- `GET /api/festival/notices`
-- `GET /api/festival/timelines`
-- `GET /api/users/me`
-- `PATCH /api/users/me`
+- `GET /api/booths` - Implemented
+- `GET /api/booths/{boothId}` - Implemented
+- `GET /api/booths/{boothId}/menus` - Implemented
+- `GET /api/locations` - Implemented
+- `GET /api/festival` - Implemented
+- `GET /api/festival/notices` - Implemented
+- `GET /api/festival/timelines` - Implemented
+- `GET /api/users/me` - Implemented
+- `PATCH /api/users/me` - Implemented
 
 ### General User Only
 
-- `POST /api/favorites`
-- `GET /api/favorites`
-- `DELETE /api/favorites/{favoriteId}`
-- `POST /api/booths/{boothId}/waitings`
-- `DELETE /api/waitings/{waitingId}`
-- `GET /api/waitings`
+- `POST /api/favorites` - Implemented
+- `GET /api/favorites` - Implemented
+- `DELETE /api/favorites/{favoriteId}` - Implemented
+- `POST /api/booths/{boothId}/waitings` - Security policy only, controller pending
+- `DELETE /api/waitings/{waitingId}` - Security policy only, controller pending
+- `GET /api/waitings` - Implemented
 
 ### Booth Manager
 
-- `GET /api/booth-applications/me`
-- `PATCH /api/booths/{boothId}`
-- `POST /api/booths/{boothId}/menus`
-- `PATCH /api/booths/{boothId}/menus/{menuId}`
-- `DELETE /api/booths/{boothId}/menus/{menuId}`
-- `POST /api/booths/{boothId}/menus/{menuId}/sold-out`
-- `GET /api/booths/{boothId}/waitings`
-- `POST /api/waitings/{waitingId}/call`
-- `PATCH /api/waitings/{waitingId}/status`
-- `PATCH /api/booths/{boothId}/waitings/status`
+- `GET /api/booth-applications/me` - Security policy only, controller pending
+- `PATCH /api/booths/{boothId}` - Security policy only, controller pending
+- `POST /api/booths/{boothId}/menus` - Security policy only, controller pending
+- `PATCH /api/booths/{boothId}/menus/{menuId}` - Security policy only, controller pending
+- `DELETE /api/booths/{boothId}/menus/{menuId}` - Security policy only, controller pending
+- `POST /api/booths/{boothId}/menus/{menuId}/sold-out` - Security policy only, controller pending
+- `GET /api/booths/{boothId}/waitings` - Security policy only, controller pending
+- `POST /api/waitings/{waitingId}/call` - Security policy only, controller pending
+- `PATCH /api/waitings/{waitingId}/status` - Security policy only, controller pending
+- `PATCH /api/booths/{boothId}/waitings/status` - Security policy only, controller pending
 
 ### Festival Admin
 
-- `PATCH /api/festival`
-- `POST /api/festival/days`
-- `PATCH /api/festival/days/{festivalDayId}`
-- `DELETE /api/festival/days/{festivalDayId}`
-- `POST /api/festival/notices`
-- `PATCH /api/festival/notices/{noticeId}`
-- `DELETE /api/festival/notices/{noticeId}`
-- `POST /api/festival/timelines`
-- `PATCH /api/festival/timelines/{timelineId}`
-- `DELETE /api/festival/timelines/{timelineId}`
-- `POST /api/locations/slots`
-- `POST /api/locations/{locationId}/assignment`
-- `DELETE /api/locations/{locationId}/assignment`
-- `GET /api/admin/booth-applications`
-- `GET /api/admin/booth-applications/{applicationId}`
-- `POST /api/admin/booth-applications/{applicationId}/approve`
-- `POST /api/admin/booth-applications/{applicationId}/reject`
-- `DELETE /api/admin/booth-applications/{applicationId}`
+- `PATCH /api/festival` - Security policy only, controller pending
+- `POST /api/festival/days` - Security policy only, controller pending
+- `PATCH /api/festival/days/{festivalDayId}` - Security policy only, controller pending
+- `DELETE /api/festival/days/{festivalDayId}` - Security policy only, controller pending
+- `POST /api/festival/notices` - Security policy only, controller pending
+- `PATCH /api/festival/notices/{noticeId}` - Security policy only, controller pending
+- `DELETE /api/festival/notices/{noticeId}` - Security policy only, controller pending
+- `POST /api/festival/timelines` - Security policy only, controller pending
+- `PATCH /api/festival/timelines/{timelineId}` - Security policy only, controller pending
+- `DELETE /api/festival/timelines/{timelineId}` - Security policy only, controller pending
+- `POST /api/locations/slots` - Security policy only, controller pending
+- `POST /api/locations/{locationId}/assignment` - Security policy only, controller pending
+- `DELETE /api/locations/{locationId}/assignment` - Security policy only, controller pending
+- `GET /api/admin/booth-applications` - Security policy only, controller pending
+- `GET /api/admin/booth-applications/{applicationId}` - Security policy only, controller pending
+- `POST /api/admin/booth-applications/{applicationId}/approve` - Security policy only, controller pending
+- `POST /api/admin/booth-applications/{applicationId}/reject` - Security policy only, controller pending
+- `DELETE /api/admin/booth-applications/{applicationId}` - Security policy only, controller pending
 
 ## Scope Notes
 
-- `Booth.active` / `is_active`는 제거한다.
+- `Booth.active` / `is_active`는 제거되었다.
+- `BoothAdminAssignment`는 제거되었고, v1 권한 판정에서는 `booths.manager_id`를 사용한다.
 - 축제 운영 중/운영 후 부스 삭제는 지원하지 않는다.
 - 승인된 `Booth`는 삭제 대상이 아니다.
 - 삭제 가능한 것은 승인 전 `BoothApplication`뿐이다.
 - 신청 삭제 시 신청과 함께 생성된 `BOOTH_MANAGER` 계정도 hard delete한다.
 - `BOOTH_MANAGER`는 전역 role로 유지한다.
 - 부스 관리자 계정은 일반 사용자 계정과 재사용하지 않는다.
-- `BoothAdminAssignment`는 현재 schema에 남아 있지만, v1 권한 판정에서는 사용하지 않는다.
+- `FOOD_TRUCK`은 내부적으로 `Booth`로 표현하되 축제 관리자 계정을 manager로 배정하는 생성 로직이 필요하다.
 - 이미지 업로드 저장소 연동은 v1 도메인/API 구현 이후 별도 계획으로 분리한다.
-- `docs/API-ENDPOINTS.md`도 PATCH 이후 권한 구분과 삭제 정책에 맞춰 별도 갱신이 필요하다.
+- `docs/API-ENDPOINTS.md`도 현재 구현 상태와 PATCH 이후 권한 구분에 맞춰 별도 갱신이 필요하다.
