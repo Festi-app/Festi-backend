@@ -179,6 +179,15 @@ type BoothApplicationResponse = {
   createdAt: string;
   updatedAt: string;
 };
+
+type FestivalDayResponse = {
+  id: string;
+  day: string;
+  dayStart: string;
+  dayEnd: string;
+  nightStart: string;
+  nightEnd: string;
+};
 ```
 
 ## Implemented Endpoints
@@ -332,6 +341,46 @@ type LocationResponse = {
 
 `boothSummary` can be `null` for an unassigned location slot. The frontend should render empty slots explicitly instead of filtering them out by default.
 
+`POST /api/locations/slots`
+
+- Auth: `FESTIVAL_ADMIN`
+- Creates unassigned slots from zone labels and counts. Slot indexes are generated from `1..count` per zone.
+- Body:
+
+```json
+{
+  "festivalDayId": "00000000-0000-0000-0000-000000000000",
+  "type": "NIGHT",
+  "zones": [
+    { "zoneLabel": "A", "count": 3 },
+    { "zoneLabel": "B", "count": 2 }
+  ]
+}
+```
+
+- Response: `LocationResponse[]`
+- Duplicate `festivalDayId + zoneLabel + index` returns `409 CONFLICT`.
+
+`POST /api/locations/{locationId}/assignment`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body:
+
+```json
+{
+  "boothId": "00000000-0000-0000-0000-000000000000"
+}
+```
+
+- Response: `LocationResponse`
+- Assigning an already assigned slot returns `409 CONFLICT`.
+
+`DELETE /api/locations/{locationId}/assignment`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `204 No Content`
+- Removes only `boothSummary`; the slot index remains.
+
 ### Festival
 
 `GET /api/festival`
@@ -349,6 +398,51 @@ type FestivalResponse = {
 };
 ```
 
+`PATCH /api/festival`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body:
+
+```json
+{
+  "name": "Festi",
+  "startDate": "2026-05-18",
+  "endDate": "2026-05-20",
+  "description": "Festival description"
+}
+```
+
+- Response: `FestivalResponse`
+
+`POST /api/festival/days`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body:
+
+```json
+{
+  "day": "2026-05-18",
+  "dayStart": "10:00:00",
+  "dayEnd": "17:00:00",
+  "nightStart": "18:00:00",
+  "nightEnd": "23:00:00"
+}
+```
+
+- Response: `FestivalDayResponse`
+- Duplicate `day` within the active festival returns `409 CONFLICT`.
+
+`PATCH /api/festival/days/{festivalDayId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body is the same as `POST /api/festival/days`.
+- Response: `FestivalDayResponse`
+
+`DELETE /api/festival/days/{festivalDayId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `204 No Content`
+
 `GET /api/festival/notices`
 
 - Auth: any authenticated user
@@ -364,6 +458,32 @@ type NoticeResponse = {
   createdAt: string;
 };
 ```
+
+`POST /api/festival/notices`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body:
+
+```json
+{
+  "title": "Notice",
+  "content": "Notice content",
+  "pinned": true
+}
+```
+
+- Response: `NoticeResponse`
+
+`PATCH /api/festival/notices/{noticeId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body is the same as `POST /api/festival/notices`.
+- Response: `NoticeResponse`
+
+`DELETE /api/festival/notices/{noticeId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `204 No Content`
 
 `GET /api/festival/timelines`
 
@@ -384,6 +504,34 @@ type TimelineResponse = {
   endTime: string;
 };
 ```
+
+`POST /api/festival/timelines`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body:
+
+```json
+{
+  "festivalDayId": "00000000-0000-0000-0000-000000000000",
+  "title": "Main Stage",
+  "artist": "Artist",
+  "startTime": "18:00:00",
+  "endTime": "19:00:00"
+}
+```
+
+- Response: `TimelineResponse`
+
+`PATCH /api/festival/timelines/{timelineId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Body is the same as `POST /api/festival/timelines`.
+- Response: `TimelineResponse`
+
+`DELETE /api/festival/timelines/{timelineId}`
+
+- Auth: `FESTIVAL_ADMIN`
+- Response: `204 No Content`
 
 ### Favorites
 
@@ -469,7 +617,7 @@ Backend rules:
 ## Frontend Agent Rules
 
 - Use `docs/API-ENDPOINTS.md` or `/v3/api-docs` as the endpoint boundary.
-- Do not add frontend calls to menu mutation, location mutation, or waiting call/status APIs until they appear in the implemented API docs.
+- Do not add frontend calls to menu mutation or waiting call/status APIs until they appear in the implemented API docs.
 - Treat `401` as a login/session recovery path.
 - Treat `403` as a role mismatch path.
 - Treat `404` on owner-scoped resources as "not visible or not found"; do not reveal ownership assumptions in UI copy.

@@ -1,5 +1,7 @@
 package com.festi.backend.festival;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -24,5 +26,17 @@ public final class NoticeDTO {
                     notice.getCreatedAt()
             );
         }
+    }
+
+    public record Request(
+            @NotBlank
+            @Size(max = 200)
+            String title,
+
+            @NotBlank
+            String content,
+
+            boolean pinned
+    ) {
     }
 }

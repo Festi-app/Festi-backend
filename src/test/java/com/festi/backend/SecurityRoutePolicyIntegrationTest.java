@@ -139,7 +139,7 @@ class SecurityRoutePolicyIntegrationTest {
     void festivalAdminsPassBothGates() throws Exception {
         mockMvc.perform(patch("/api/festival")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isBadRequest());
 
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))

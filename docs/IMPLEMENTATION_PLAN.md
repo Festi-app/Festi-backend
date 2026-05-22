@@ -4,9 +4,9 @@
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD와 `docs/PATCH.md`의 변경사항을 기준으로 도메인 모델, JWT 인증, 역할 기반 인가, 사용자 조회 API를 구성한다.
 
-현재 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, 부스 신청/승인/삭제 워크플로우, Swagger/OpenAPI 문서화까지 구현되어 있다.
+현재 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, 부스 신청/승인/삭제 워크플로우, 축제 관리자 변경 API, Swagger/OpenAPI 문서화까지 구현되어 있다.
 
-남은 핵심 작업은 축제 관리자 변경 API, 부스 관리자 변경 API, 부스 관리자 웨이팅 운영/호출/알림 API, 그리고 현재 구현된 일반 사용자 API의 validation/test 보강이다.
+남은 핵심 작업은 부스 관리자 변경 API, 부스 관리자 웨이팅 운영/호출/알림 API, 그리고 현재 구현된 일반 사용자 API의 validation/test 보강이다.
 
 이 문서는 현재 체크아웃 기준 구현 범위와 우선순위를 설명하며, 시점 의존적인 검증 이력과 세부 실행 로그는 별도 변경 이력 문서에서 관리한다.
 
@@ -21,8 +21,8 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 | 7 | PATCH 기반 도메인/migration 재정렬 | Done |
 | 8 | 일반 사용자 API 구현 | Done |
 | 9 | 부스 신청/승인/삭제 워크플로우 구현 | Done |
-| 10 | 축제 관리자 API 구현 | Next |
-| 11 | 부스 관리자 API 구현 | Pending |
+| 10 | 축제 관리자 API 구현 | Done |
+| 11 | 부스 관리자 API 구현 | Next |
 | 12 | 부스 관리자 웨이팅 운영 + 알림 API 구현 | Pending |
 | 13 | controller/service/repository 테스트 보강 | In Progress |
 | 14 | Swagger/OpenAPI 문서화 | Done |
@@ -447,9 +447,9 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 ## Priority 10: Festival Admin APIs
 
-축제 관리자 권한이 필요한 API를 구현한다. 현재는 `SecurityConfig` route policy만 적용되어 있고 controller/service는 없다.
+축제 관리자 권한이 필요한 변경 API가 구현되어 있다.
 
-### APIs To Implement
+### Implemented APIs
 
 - `PATCH /api/festival`
 - `POST /api/festival/days`
@@ -472,6 +472,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 배치도 슬롯 생성은 프론트가 전달한 구역별 칸 수 정보를 기준으로 한다.
 - 이미 부스가 배정된 슬롯에는 다른 부스를 바로 배정할 수 없다.
 - 슬롯 배정을 바꾸려면 기존 배정을 먼저 취소한다.
+- 슬롯 배정 취소는 슬롯 번호를 보존하고 부스 연결만 제거한다.
 - 승인된 부스 자체를 삭제하는 API는 제공하지 않는다.
 
 ## Priority 11: Booth Manager APIs
@@ -543,6 +544,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `BoothApplicationDTOTest`
 - `BoothApplicationServiceTest`
 - `BoothApplicationControllerIntegrationTest`
+- `FestivalAdminDTOTest`
+- `FestivalAdminControllerIntegrationTest`
 - `HmacJwtTokenServiceTest`
 - `JwtAuthenticationConverterTest`
 - `SecurityExceptionHandlersTest`
@@ -574,17 +577,6 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - 야간 부스 메뉴 생성 성공
   - 주간 부스 메뉴 생성 실패
   - 품절 처리
-- `LocationServiceTest` 확장
-  - 구역별 슬롯 생성
-  - `festival_id + zone_label + index + festival_day_id` unique 검증
-  - 여러 슬롯에 같은 부스 배정
-  - 이미 배정된 슬롯 중복 배정 실패
-  - 배정 취소
-- `FestivalServiceTest` 확장
-  - 축제 정보 수정
-  - 축제 일자별 주간/야간 운영 시간 관리
-  - 공지 등록/수정/삭제/조회
-  - 공연 타임라인 등록/수정/삭제/조회
 - `WaitingServiceTest` 확장
   - 일반 사용자 웨이팅 등록
   - 일반 사용자 외 role 등록 실패
@@ -622,7 +614,7 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 
 ### Follow-Up
 
-- Priority 10-12에서 새 controller를 추가할 때 같은 OpenAPI annotation 기준을 적용한다.
+- Priority 11-12에서 새 controller를 추가할 때 같은 OpenAPI annotation 기준을 적용한다.
 - 구현되지 않은 endpoint가 controller에 추가되면 `docs/API-ENDPOINTS.md`와 Swagger 설명을 함께 갱신한다.
 
 ## API Access Policy
@@ -673,19 +665,19 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 
 ### Festival Admin
 
-- `PATCH /api/festival` - Security policy only, controller pending
-- `POST /api/festival/days` - Security policy only, controller pending
-- `PATCH /api/festival/days/{festivalDayId}` - Security policy only, controller pending
-- `DELETE /api/festival/days/{festivalDayId}` - Security policy only, controller pending
-- `POST /api/festival/notices` - Security policy only, controller pending
-- `PATCH /api/festival/notices/{noticeId}` - Security policy only, controller pending
-- `DELETE /api/festival/notices/{noticeId}` - Security policy only, controller pending
-- `POST /api/festival/timelines` - Security policy only, controller pending
-- `PATCH /api/festival/timelines/{timelineId}` - Security policy only, controller pending
-- `DELETE /api/festival/timelines/{timelineId}` - Security policy only, controller pending
-- `POST /api/locations/slots` - Security policy only, controller pending
-- `POST /api/locations/{locationId}/assignment` - Security policy only, controller pending
-- `DELETE /api/locations/{locationId}/assignment` - Security policy only, controller pending
+- `PATCH /api/festival` - Implemented
+- `POST /api/festival/days` - Implemented
+- `PATCH /api/festival/days/{festivalDayId}` - Implemented
+- `DELETE /api/festival/days/{festivalDayId}` - Implemented
+- `POST /api/festival/notices` - Implemented
+- `PATCH /api/festival/notices/{noticeId}` - Implemented
+- `DELETE /api/festival/notices/{noticeId}` - Implemented
+- `POST /api/festival/timelines` - Implemented
+- `PATCH /api/festival/timelines/{timelineId}` - Implemented
+- `DELETE /api/festival/timelines/{timelineId}` - Implemented
+- `POST /api/locations/slots` - Implemented
+- `POST /api/locations/{locationId}/assignment` - Implemented
+- `DELETE /api/locations/{locationId}/assignment` - Implemented
 - `GET /api/admin/booth-applications` - Implemented
 - `GET /api/admin/booth-applications/{applicationId}` - Implemented
 - `POST /api/admin/booth-applications/{applicationId}/approve` - Implemented

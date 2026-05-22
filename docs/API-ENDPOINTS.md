@@ -59,6 +59,9 @@
 | method | endpoint | 설명 | 권한 |
 | --- | --- | --- | --- |
 | GET | `/api/locations` | 배치도 조회. 필수 query: `day`, `type` | 인증 사용자 |
+| POST | `/api/locations/slots` | 구역별 슬롯 생성. `festivalDayId`, `type`, `zones[]`를 받는다. | `FESTIVAL_ADMIN` |
+| POST | `/api/locations/{locationId}/assignment` | 빈 슬롯에 부스 배정. `boothId`를 받는다. | `FESTIVAL_ADMIN` |
+| DELETE | `/api/locations/{locationId}/assignment` | 슬롯의 부스 배정 취소 | `FESTIVAL_ADMIN` |
 
 ## favorites
 
@@ -80,5 +83,15 @@
 | method | endpoint | 설명 | 권한 |
 | --- | --- | --- | --- |
 | GET | `/api/festival` | 축제 기본 정보 조회 | 인증 사용자 |
+| PATCH | `/api/festival` | 축제 기본 정보 수정. `name`, `startDate`, `endDate`, `description`을 받는다. | `FESTIVAL_ADMIN` |
+| POST | `/api/festival/days` | 축제 운영 일자와 주간/야간 운영 시간 생성 | `FESTIVAL_ADMIN` |
+| PATCH | `/api/festival/days/{festivalDayId}` | 축제 운영 일자와 주간/야간 운영 시간 수정 | `FESTIVAL_ADMIN` |
+| DELETE | `/api/festival/days/{festivalDayId}` | 축제 운영 일자 삭제 | `FESTIVAL_ADMIN` |
 | GET | `/api/festival/notices` | 축제 공지사항 목록 조회 | 인증 사용자 |
+| POST | `/api/festival/notices` | 축제 공지사항 생성 | `FESTIVAL_ADMIN` |
+| PATCH | `/api/festival/notices/{noticeId}` | 축제 공지사항 수정 | `FESTIVAL_ADMIN` |
+| DELETE | `/api/festival/notices/{noticeId}` | 축제 공지사항 삭제 | `FESTIVAL_ADMIN` |
 | GET | `/api/festival/timelines` | 축제 공연 타임라인 조회 | 인증 사용자 |
+| POST | `/api/festival/timelines` | 축제 공연 타임라인 생성 | `FESTIVAL_ADMIN` |
+| PATCH | `/api/festival/timelines/{timelineId}` | 축제 공연 타임라인 수정 | `FESTIVAL_ADMIN` |
+| DELETE | `/api/festival/timelines/{timelineId}` | 축제 공연 타임라인 삭제 | `FESTIVAL_ADMIN` |

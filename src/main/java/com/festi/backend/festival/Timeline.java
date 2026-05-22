@@ -58,7 +58,8 @@ public class Timeline extends BaseTimeEntity {
     }
 
 
-    public void update(String title, String artist, LocalTime startTime, LocalTime endTime) {
+    public void update(LocalDate day, String title, String artist, LocalTime startTime, LocalTime endTime) {
+        this.day = day;
         this.title = title;
         this.artist = artist;
         this.startTime = startTime;
