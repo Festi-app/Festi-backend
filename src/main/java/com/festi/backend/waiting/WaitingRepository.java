@@ -17,4 +17,7 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
     List<Waiting> findByUserIdAndFestivalIdOrderByRegisteredAtDesc(@Param("userId") String userId, @Param("festivalId") UUID festivalId);
 
     List<Waiting> findByBoothIdAndStatusOrderByRegisteredAt(UUID boothId, WaitingStatus status);
+
+    @Query("SELECT COUNT(w) FROM Waiting w WHERE w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId AND w.status IN :statuses")
+    long countByUserIdAndFestivalIdAndStatusIn(@Param("userId") String userId, @Param("festivalId") UUID festivalId, @Param("statuses") List<WaitingStatus> statuses);
 }

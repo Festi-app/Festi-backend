@@ -5,9 +5,11 @@ import static org.mockito.Mockito.when;
 
 import com.festi.backend.booth.Booth;
 import com.festi.backend.booth.BoothCategory;
+import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.festival.Festival;
 import com.festi.backend.user.User;
+import com.festi.backend.user.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -24,11 +26,17 @@ class WaitingServiceTest {
     @Mock
     private WaitingRepository waitingRepository;
 
+    @Mock
+    private BoothRepository boothRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
     private WaitingService waitingService;
 
     @BeforeEach
     void setUp() {
-        waitingService = new WaitingService(waitingRepository);
+        waitingService = new WaitingService(waitingRepository, boothRepository, userRepository);
     }
 
     @Test
