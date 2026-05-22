@@ -6,6 +6,7 @@ Festi는 대학교 축제 정보를 한곳에서 조회하고, 부스 운영 및
 
 - [프로젝트 기획서](docs/FESTI-PROJECT.md)
 - [API 엔드포인트 문서](docs/API-ENDPOINTS.md)
+- [프론트엔드 API 컨텍스트](docs/FRONTEND_API_CONTEXT.md)
 
 ## Tech Stack
 
