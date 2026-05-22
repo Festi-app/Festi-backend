@@ -10,10 +10,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,5 +40,22 @@ public class WaitingController {
             @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
     ) {
         return ResponseEntity.ok(waitingService.getMyWaitings(currentUser.id(), currentUser.festivalId()));
+    }
+
+    @Operation(summary = "Cancel waiting", description = "Cancels the authenticated user's waiting registration.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Waiting cancelled"),
+            @ApiResponse(responseCode = "400", description = "Waiting cannot be cancelled in its current status"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "USER role is required"),
+            @ApiResponse(responseCode = "404", description = "Waiting was not found")
+    })
+    @DeleteMapping("/{waitingId}")
+    public ResponseEntity<Void> cancelWaiting(
+            @Parameter(description = "Waiting ID") @PathVariable UUID waitingId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        waitingService.cancelWaiting(currentUser.id(), currentUser.festivalId(), waitingId);
+        return ResponseEntity.noContent().build();
     }
 }

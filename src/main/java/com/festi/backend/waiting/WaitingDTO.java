@@ -9,6 +9,9 @@ public final class WaitingDTO {
     private WaitingDTO() {
     }
 
+    public record Request(short partySize) {
+    }
+
     public record Response(
             UUID id,
             BoothDTO.Summary boothSummary,
