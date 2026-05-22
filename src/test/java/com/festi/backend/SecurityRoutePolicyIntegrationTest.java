@@ -89,6 +89,19 @@ class SecurityRoutePolicyIntegrationTest {
     }
 
     @Test
+    void swaggerDocumentationRoutesArePermitAll() throws Exception {
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/auth/login']").exists())
+                .andExpect(jsonPath("$.paths['/api/users/me']").exists())
+                .andExpect(jsonPath("$.paths['/api/booths']").exists())
+                .andExpect(jsonPath("$.paths['/api/favorites']").exists());
+    }
+
+    @Test
     void boothManagerAndFestivalAdminRouteRejectsMissingAuthentication() throws Exception {
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID()))
                 .andExpect(status().isUnauthorized())

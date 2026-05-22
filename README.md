@@ -165,6 +165,15 @@ DB 접속 정보가 잘못되었거나 migration 권한이 부족하면 서버�
 
 전체 API 목록은 [API 엔드포인트 문서](docs/API-ENDPOINTS.md)를 기준으로 관리합니다.
 
+## Swagger / OpenAPI
+
+애플리케이션 실행 후 Swagger UI와 OpenAPI JSON은 인증 없이 확인할 수 있습니다.
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+JWT 인증이 필요한 API를 Swagger UI에서 호출할 때는 `Authorize` 버튼에 `Bearer <access-token>` 형식으로 값을 입력합니다.
+
 ## Development Notes
 
 - DB schema는 PostgreSQL, UUID, `TIMESTAMPTZ`, enum 타입을 기준으로 Flyway migration에서 관리합니다.
