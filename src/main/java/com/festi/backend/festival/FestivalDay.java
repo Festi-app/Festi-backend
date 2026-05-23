@@ -55,6 +55,12 @@ public class FestivalDay extends BaseTimeEntity {
         this.day = day;
     }
 
+    public void update(LocalDate day, LocalTime dayStart, LocalTime dayEnd,
+                       LocalTime nightStart, LocalTime nightEnd) {
+        this.day = day;
+        updateHours(dayStart, dayEnd, nightStart, nightEnd);
+    }
+
     public void updateHours(LocalTime dayStart, LocalTime dayEnd, LocalTime nightStart, LocalTime nightEnd) {
         this.dayStart = dayStart;
         this.dayEnd = dayEnd;

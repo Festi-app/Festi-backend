@@ -1,5 +1,8 @@
 package com.festi.backend.festival;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -24,5 +27,20 @@ public final class FestivalDTO {
                     festival.getDescription()
             );
         }
+    }
+
+    public record UpdateRequest(
+            @NotBlank
+            @Size(max = 200)
+            String name,
+
+            @NotNull
+            LocalDate startDate,
+
+            @NotNull
+            LocalDate endDate,
+
+            String description
+    ) {
     }
 }

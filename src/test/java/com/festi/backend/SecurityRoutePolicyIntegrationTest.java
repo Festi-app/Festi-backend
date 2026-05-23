@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -83,9 +84,10 @@ class SecurityRoutePolicyIntegrationTest {
 
     @Test
     void boothApplicationsArePermitAll() throws Exception {
-        // No controller yet — 404 confirms the route is not blocked by security (permitAll works)
-        mockMvc.perform(post("/api/booth-applications"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/booth-applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -140,7 +142,7 @@ class SecurityRoutePolicyIntegrationTest {
     void festivalAdminsPassBothGates() throws Exception {
         mockMvc.perform(patch("/api/festival")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isBadRequest());
 
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))

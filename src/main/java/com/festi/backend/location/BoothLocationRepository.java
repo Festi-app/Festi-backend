@@ -13,4 +13,11 @@ public interface BoothLocationRepository extends JpaRepository<BoothLocation, Sh
 
     @EntityGraph(attributePaths = "booth")
     List<BoothLocation> findByDayOrderByIndex(FestivalDay day);
+
+    boolean existsByFestivalIdAndDayAndZoneLabelAndIndex(
+            java.util.UUID festivalId,
+            FestivalDay day,
+            String zoneLabel,
+            Short index
+    );
 }

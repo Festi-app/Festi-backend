@@ -69,13 +69,21 @@ public class BoothLocation extends BaseTimeEntity {
         this.zoneLabel = zoneLabel;
     }
 
+    public BoothLocation(Festival festival, BoothType type, FestivalDay day, String zoneLabel, Short index) {
+        this(festival, type, day, zoneLabel);
+        this.index = index;
+    }
+
     public void assignBooth(Booth booth, Short index) {
         this.booth = booth;
         this.index = index;
     }
 
+    public void assignBooth(Booth booth) {
+        this.booth = booth;
+    }
+
     public void removeBooth() {
         this.booth = null;
-        this.index = null;
     }
 }
