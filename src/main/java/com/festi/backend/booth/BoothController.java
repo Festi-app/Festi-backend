@@ -15,11 +15,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -73,6 +75,23 @@ public class BoothController {
             @PathVariable UUID boothId
     ) {
         return ResponseEntity.ok(boothService.getBooth(boothId));
+    }
+
+    @Operation(summary = "Update booth", description = "Updates booth information. Only the assigned booth manager or a festival admin can update a booth.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Booth updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found")
+    })
+    @PatchMapping("/{boothId}")
+    public ResponseEntity<BoothDTO.Detail> updateBooth(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @Valid @RequestBody BoothDTO.UpdateRequest request
+    ) {
+        return ResponseEntity.ok(boothService.updateBooth(currentUser, boothId, request));
     }
 
     @Operation(summary = "Register waiting", description = "Registers the authenticated user for a waiting slot at the specified booth.")

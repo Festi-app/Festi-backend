@@ -11,6 +11,7 @@ import com.festi.backend.festival.FestivalDayRepository;
 import com.festi.backend.festival.FestivalRepository;
 import com.festi.backend.location.BoothLocation;
 import com.festi.backend.location.BoothLocationRepository;
+import com.festi.backend.security.BoothAuthorizationService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -37,13 +38,16 @@ class BoothServiceTest {
     @Mock
     private FestivalDayRepository festivalDayRepository;
 
+    @Mock
+    private BoothAuthorizationService boothAuthorizationService;
+
     private BoothService boothService;
 
     private Festival festival;
 
     @BeforeEach
     void setUp() {
-        boothService = new BoothService(boothRepository, boothLocationRepository, festivalRepository, festivalDayRepository);
+        boothService = new BoothService(boothRepository, boothLocationRepository, festivalRepository, festivalDayRepository, boothAuthorizationService);
         festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
         ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
     }

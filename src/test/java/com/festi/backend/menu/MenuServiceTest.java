@@ -9,6 +9,7 @@ import com.festi.backend.booth.BoothCategory;
 import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.common.exception.NotFoundException;
+import com.festi.backend.security.BoothAuthorizationService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,11 +29,14 @@ class MenuServiceTest {
     @Mock
     private MenuItemRepository menuItemRepository;
 
+    @Mock
+    private BoothAuthorizationService boothAuthorizationService;
+
     private MenuService menuService;
 
     @BeforeEach
     void setUp() {
-        menuService = new MenuService(boothRepository, menuItemRepository);
+        menuService = new MenuService(boothRepository, menuItemRepository, boothAuthorizationService);
     }
 
     @Test

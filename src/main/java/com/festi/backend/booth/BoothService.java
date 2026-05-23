@@ -7,6 +7,8 @@ import com.festi.backend.festival.FestivalDayRepository;
 import com.festi.backend.festival.FestivalRepository;
 import com.festi.backend.location.BoothLocation;
 import com.festi.backend.location.BoothLocationRepository;
+import com.festi.backend.security.AuthenticatedUser;
+import com.festi.backend.security.BoothAuthorizationService;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +27,7 @@ public class BoothService {
     private final BoothLocationRepository boothLocationRepository;
     private final FestivalRepository festivalRepository;
     private final FestivalDayRepository festivalDayRepository;
+    private final BoothAuthorizationService boothAuthorizationService;
 
     public List<BoothDTO.Summary> getBooths(LocalDate day, BoothType type, BoothCategory category) {
         if (day != null) {
@@ -38,6 +41,17 @@ public class BoothService {
     public BoothDTO.Detail getBooth(UUID boothId) {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
+        return BoothDTO.Detail.from(booth);
+    }
+
+    @Transactional
+    public BoothDTO.Detail updateBooth(AuthenticatedUser currentUser, UUID boothId,
+                                       BoothDTO.UpdateRequest request) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        boothAuthorizationService.assertCanManageBooth(currentUser, booth);
+        booth.update(request.name(), request.category(), request.description(),
+                request.operatingHours(), request.imageUrl());
         return BoothDTO.Detail.from(booth);
     }
 
