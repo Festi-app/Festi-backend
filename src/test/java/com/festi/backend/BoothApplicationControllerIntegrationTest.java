@@ -40,6 +40,8 @@ import tools.jackson.databind.ObjectMapper;
 @ActiveProfiles("test")
 class BoothApplicationControllerIntegrationTest {
 
+    private static final String BOOTH_MANAGER_ID = "manager1";
+
     @Autowired
     private WebApplicationContext context;
 
@@ -82,7 +84,7 @@ class BoothApplicationControllerIntegrationTest {
 
     @Test
     void meEndpointRequiresBoothManagerOrFestivalAdmin() throws Exception {
-        when(boothApplicationService.getMyApplication(eq("manageruser"), any()))
+        when(boothApplicationService.getMyApplication(eq(BOOTH_MANAGER_ID), eq(festivalId)))
                 .thenReturn(response(BoothApplicationStatus.PENDING, null));
 
         mockMvc.perform(get("/api/booth-applications/me"))
@@ -95,7 +97,9 @@ class BoothApplicationControllerIntegrationTest {
         mockMvc.perform(get("/api/booth-applications/me")
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.applicantId").value("manager1"));
+                .andExpect(jsonPath("$.applicantId").value(BOOTH_MANAGER_ID));
+
+        verify(boothApplicationService).getMyApplication(eq(BOOTH_MANAGER_ID), eq(festivalId));
     }
 
     @Test
@@ -163,7 +167,7 @@ class BoothApplicationControllerIntegrationTest {
 
     private BoothApplicationDTO.CreateRequest createRequest() {
         return new BoothApplicationDTO.CreateRequest(
-                "manager1",
+                BOOTH_MANAGER_ID,
                 "Password1!",
                 "Manager",
                 "01012345678",
@@ -179,7 +183,7 @@ class BoothApplicationControllerIntegrationTest {
         return new BoothApplicationDTO.Response(
                 applicationId,
                 festivalId,
-                "manager1",
+                BOOTH_MANAGER_ID,
                 "Night Booth",
                 BoothType.NIGHT,
                 BoothCategory.ALCOHOL,
@@ -193,7 +197,7 @@ class BoothApplicationControllerIntegrationTest {
     }
 
     private String token(UserRole role) {
-        String subject = role == UserRole.BOOTH_MANAGER ? "manageruser" : role.name().toLowerCase() + "user";
+        String subject = role == UserRole.BOOTH_MANAGER ? BOOTH_MANAGER_ID : role.name().toLowerCase() + "user";
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(subject)
                 .claim("festivalId", festivalId.toString())
