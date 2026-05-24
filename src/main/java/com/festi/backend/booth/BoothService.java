@@ -1,5 +1,6 @@
 package com.festi.backend.booth;
 
+import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.NotFoundException;
 import com.festi.backend.festival.Festival;
 import com.festi.backend.festival.FestivalDay;
@@ -50,6 +51,28 @@ public class BoothService {
         Booth booth = new Booth(request.name(), category, BoothType.FOOD_TRUCK);
         booth.update(request.name(), category, request.description(), request.operatingHours(), request.imageUrl());
         return BoothDTO.Detail.from(boothRepository.save(booth));
+    }
+
+    @Transactional
+    public BoothDTO.Detail updateFoodTruck(UUID boothId, BoothDTO.UpdateFoodTruckRequest request) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        if (booth.getType() != BoothType.FOOD_TRUCK) {
+            throw new BadRequestException("Booth is not a food truck.");
+        }
+        booth.updatePartial(request.name(), request.category(), request.description(),
+                request.operatingHours(), request.imageUrl());
+        return BoothDTO.Detail.from(booth);
+    }
+
+    @Transactional
+    public void deleteFoodTruck(UUID boothId) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        if (booth.getType() != BoothType.FOOD_TRUCK) {
+            throw new BadRequestException("Booth is not a food truck.");
+        }
+        boothRepository.delete(booth);
     }
 
     @Transactional
