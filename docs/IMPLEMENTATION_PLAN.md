@@ -198,6 +198,11 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 - `V5__waiting_push_notification_persistence.sql`
   - `push_subscriptions`, `waiting_notification_events`, `push_notification_deliveries` table 추가
   - `push_notification_delivery_status` enum 추가
+- `V6__waiting_notification_outbox_processing.sql`
+  - 웨이팅 알림 outbox 처리 상태와 retry metadata 추가
+- `V7__booth_application_created_booth_reference.sql`
+  - `booth_applications.booth_id` nullable FK 및 unique 제약 추가
+  - 승인된 신청에서 생성 부스를 재조회할 수 있도록 연결 저장
 
 ### Implemented Auditing and Temporal Policy
 
@@ -388,6 +393,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - `BoothRepository`의 active 기반 조회 제거
   - `BoothApplication` entity, enum, repository, table 추가
   - `BoothApplicationStatus`는 `PENDING`, `APPROVED`, `REJECTED`
+  - 승인된 `BoothApplication`은 생성된 `Booth`를 nullable one-to-one 참조하고 응답에 `boothId`를 포함
 - Booth / Food Truck / Location
   - `BoothType.FOOD_TRUCK` 추가
   - 푸드트럭은 내부적으로 `Booth`로 표현
@@ -466,12 +472,15 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 - `GET /api/booth-applications/me`
   - 현재 부스 관리자 계정의 신청 상태를 조회한다.
+  - 승인 완료 시 응답의 `boothId`로 담당 부스 관리 API를 호출할 수 있다.
 
 #### Festival Admin
 
 - `GET /api/admin/booth-applications`
 - `GET /api/admin/booth-applications/{applicationId}`
 - `POST /api/admin/booth-applications/{applicationId}/approve`
+  - `PENDING` 신청을 승인하고 생성된 `Booth`를 신청에 연결한다.
+  - 응답 `boothId`는 생성된 부스 UUID이며, 승인 전 또는 거절 응답에서는 `null`이다.
 - `POST /api/admin/booth-applications/{applicationId}/reject`
 - `DELETE /api/admin/booth-applications/{applicationId}`
 

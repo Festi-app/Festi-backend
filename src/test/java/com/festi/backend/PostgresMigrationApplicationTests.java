@@ -57,11 +57,33 @@ class PostgresMigrationApplicationTests {
             """,
             Integer.class
         );
+        Integer applicationBoothIdColumnCount = jdbcTemplate.queryForObject(
+            """
+            select count(*)
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'booth_applications'
+              and column_name = 'booth_id'
+            """,
+            Integer.class
+        );
+        Integer applicationBoothConstraintCount = jdbcTemplate.queryForObject(
+            """
+            select count(*)
+            from information_schema.table_constraints
+            where table_schema = 'public'
+              and table_name = 'booth_applications'
+              and constraint_name in ('booth_applications_booth_fk', 'booth_applications_booth_unique')
+            """,
+            Integer.class
+        );
 
         assertThat(appliedMigrationCount).isGreaterThan(0);
         assertThat(phoneNullable).isEqualTo("NO");
         assertThat(notificationTableCount).isEqualTo(3);
         assertThat(outboxColumnCount).isEqualTo(6);
+        assertThat(applicationBoothIdColumnCount).isEqualTo(1);
+        assertThat(applicationBoothConstraintCount).isEqualTo(2);
     }
 
     @Test
