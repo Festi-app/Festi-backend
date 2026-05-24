@@ -3,6 +3,7 @@ package com.festi.backend.favorite;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -119,6 +120,9 @@ class FavoriteServiceTest {
         FavoriteDTO.Response response = favoriteService.addFavorite(userId, festivalId, nightBoothId);
 
         assertThat(response).isNotNull();
+        // NIGHT 타입만 조회하고 DAY 타입은 조회하지 않았음을 검증
+        verify(favoriteRepository).countByFestivalIdAndUserIdAndBoothType(festivalId, userId, BoothType.NIGHT);
+        verify(favoriteRepository, never()).countByFestivalIdAndUserIdAndBoothType(festivalId, userId, BoothType.DAY);
     }
 
     @Test
