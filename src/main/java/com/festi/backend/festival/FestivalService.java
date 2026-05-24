@@ -27,10 +27,10 @@ public class FestivalService {
         return FestivalDTO.Response.from(findSingleFestival());
     }
 
-    public List<FestivalDayDTO.Period> getPeriod() {
+    public List<FestivalDayDTO.Summary> getPeriod() {
         Festival festival = findSingleFestival();
         return festivalDayRepository.findByFestivalIdOrderByDay(festival.getId()).stream()
-                .map(FestivalDayDTO.Period::from)
+                .map(FestivalDayDTO.Summary::from)
                 .toList();
     }
 

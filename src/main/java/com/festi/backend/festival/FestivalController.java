@@ -49,7 +49,7 @@ public class FestivalController {
             @ApiResponse(responseCode = "404", description = "Festival was not found")
     })
     @GetMapping("/period")
-    public ResponseEntity<List<FestivalDayDTO.Period>> getPeriod() {
+    public ResponseEntity<List<FestivalDayDTO.Summary>> getPeriod() {
         return ResponseEntity.ok(festivalService.getPeriod());
     }
 
