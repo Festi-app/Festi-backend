@@ -104,7 +104,7 @@ class MenuServiceTest {
 
         assertThatThrownBy(() -> menuService.createMenu(manager, boothId, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("NIGHT booths");
+                .hasMessageContaining("NIGHT and FOOD_TRUCK booths");
     }
 
     @Test
@@ -164,7 +164,7 @@ class MenuServiceTest {
 
         assertThatThrownBy(() -> menuService.updateMenu(manager, boothId, menuId, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("NIGHT booths");
+                .hasMessageContaining("NIGHT and FOOD_TRUCK booths");
     }
 
     @Test

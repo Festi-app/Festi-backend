@@ -234,7 +234,7 @@ class BoothManagerControllerIntegrationTest {
                 BoothCategory.ACTIVITY, BoothType.FOOD_TRUCK, "설명", "11:00~20:00", null, false);
         when(boothService.createFoodTruck(any())).thenReturn(foodTruck);
 
-        mockMvc.perform(post("/api/booths/food-trucks")
+        mockMvc.perform(post("/api/booths/admin/food-trucks")
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -245,7 +245,7 @@ class BoothManagerControllerIntegrationTest {
 
     @Test
     void boothManagerCannotCreateFoodTruck() throws Exception {
-        mockMvc.perform(post("/api/booths/food-trucks")
+        mockMvc.perform(post("/api/booths/admin/food-trucks")
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -255,7 +255,7 @@ class BoothManagerControllerIntegrationTest {
 
     @Test
     void userCannotCreateFoodTruck() throws Exception {
-        mockMvc.perform(post("/api/booths/food-trucks")
+        mockMvc.perform(post("/api/booths/admin/food-trucks")
                         .header("Authorization", "Bearer " + token(UserRole.USER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
