@@ -77,6 +77,20 @@ public class BoothController {
         return ResponseEntity.ok(boothService.getBooth(boothId));
     }
 
+    @Operation(summary = "Create food truck", description = "Creates a food truck booth. Only a festival admin can call this endpoint.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Food truck created"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "FESTIVAL_ADMIN role is required")
+    })
+    @PostMapping("/food-trucks")
+    public ResponseEntity<BoothDTO.Detail> createFoodTruck(
+            @Valid @RequestBody BoothDTO.CreateFoodTruckRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(boothService.createFoodTruck(request));
+    }
+
     @Operation(summary = "Update booth", description = "Updates booth information. Only the assigned booth manager or a festival admin can update a booth.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Booth updated"),
