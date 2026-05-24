@@ -109,9 +109,6 @@ public class WaitingService {
         if (booth.getType() != BoothType.NIGHT) {
             throw new BadRequestException("Waiting is only available for NIGHT booths.");
         }
-        if (request.open() == null) {
-            throw new BadRequestException("Waiting open status is required.");
-        }
         if (request.open()) {
             booth.openWaiting();
         } else {
