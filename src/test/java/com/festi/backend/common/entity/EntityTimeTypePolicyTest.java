@@ -11,6 +11,9 @@ import com.festi.backend.festival.Notice;
 import com.festi.backend.festival.Timeline;
 import com.festi.backend.location.BoothLocation;
 import com.festi.backend.menu.MenuItem;
+import com.festi.backend.notification.PushNotificationDelivery;
+import com.festi.backend.notification.PushSubscription;
+import com.festi.backend.notification.WaitingNotificationEvent;
 import com.festi.backend.user.User;
 import com.festi.backend.waiting.Waiting;
 import java.lang.reflect.Field;
@@ -35,7 +38,10 @@ class EntityTimeTypePolicyTest {
             BoothLocation.class,
             MenuItem.class,
             Waiting.class,
-            Favorite.class
+            Favorite.class,
+            PushSubscription.class,
+            WaitingNotificationEvent.class,
+            PushNotificationDelivery.class
     );
 
     @Test

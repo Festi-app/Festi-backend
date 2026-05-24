@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -148,6 +150,15 @@ class UserLevelReadControllerIntegrationTest {
         mockMvc.perform(get("/api/waitings")
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void waitingRegistrationRequiresPositivePartySize() throws Exception {
+        mockMvc.perform(post("/api/booths/{boothId}/waitings", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"partySize\":0}")
+                        .header("Authorization", "Bearer " + token(UserRole.USER)))
+                .andExpect(status().isBadRequest());
     }
 
     private String token(UserRole role) {

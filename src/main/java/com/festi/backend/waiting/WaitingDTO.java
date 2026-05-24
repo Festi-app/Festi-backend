@@ -1,6 +1,8 @@
 package com.festi.backend.waiting;
 
 import com.festi.backend.booth.BoothDTO;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -9,7 +11,13 @@ public final class WaitingDTO {
     private WaitingDTO() {
     }
 
-    public record Request(short partySize) {
+    public record Request(@Min(1) short partySize) {
+    }
+
+    public record StatusRequest(@NotNull WaitingStatus status) {
+    }
+
+    public record OpenStatusRequest(@NotNull Boolean open) {
     }
 
     public record Response(
