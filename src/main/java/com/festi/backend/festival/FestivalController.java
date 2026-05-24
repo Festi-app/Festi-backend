@@ -42,13 +42,13 @@ public class FestivalController {
         return ResponseEntity.ok(festivalService.getFestival());
     }
 
-    @Operation(summary = "Get festival period", description = "Returns the list of festival days with their dates and IDs.")
+    @Operation(summary = "Get festival days", description = "Returns the list of festival days with their dates and IDs.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Festival period retrieved"),
             @ApiResponse(responseCode = "401", description = "Authentication is required"),
             @ApiResponse(responseCode = "404", description = "Festival was not found")
     })
-    @GetMapping("/period")
+    @GetMapping("/days")
     public ResponseEntity<List<FestivalDayDTO.Summary>> getPeriod() {
         return ResponseEntity.ok(festivalService.getPeriod());
     }
