@@ -49,8 +49,8 @@ public class FestivalController {
             @ApiResponse(responseCode = "404", description = "Festival was not found")
     })
     @GetMapping("/days")
-    public ResponseEntity<List<FestivalDayDTO.Summary>> getPeriod() {
-        return ResponseEntity.ok(festivalService.getPeriod());
+    public ResponseEntity<List<FestivalDayDTO.Summary>> getFestivalPeriod() {
+        return ResponseEntity.ok(festivalService.getFestivalPeriod());
     }
 
     @Operation(summary = "Update festival", description = "Updates basic festival information.")
