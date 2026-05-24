@@ -78,6 +78,15 @@ public class Booth extends BaseTimeEntity {
         this.imageUrl = imageUrl;
     }
 
+    public void updatePartial(String name, BoothCategory category, String description,
+                              String operatingHours, String imageUrl) {
+        if (name != null) this.name = name;
+        if (category != null) this.category = category;
+        if (description != null) this.description = description;
+        if (operatingHours != null) this.operatingHours = operatingHours;
+        if (imageUrl != null) this.imageUrl = imageUrl;
+    }
+
     public void assignManager(User manager) { this.manager = manager; }
     public void openWaiting() { this.isWaitingOpen = true; }
 
