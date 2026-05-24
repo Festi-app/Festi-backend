@@ -91,6 +91,7 @@ public class BoothController {
             @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
     ) {
         return ResponseEntity.ok(waitingService.getActiveWaitings(currentUser, boothId));
+    }
     @Operation(summary = "Create food truck", description = "Creates a food truck booth. Only a festival admin can call this endpoint.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Food truck created"),
