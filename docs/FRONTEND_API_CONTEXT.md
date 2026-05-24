@@ -169,6 +169,7 @@ type BoothApplicationResponse = {
   id: string;
   festivalId: string;
   applicantId: string;
+  boothId: string | null;
   boothName: string;
   boothType: BoothType;
   boothCategory: BoothCategory;
@@ -255,11 +256,13 @@ type FestivalDayResponse = {
 
 - `boothCategory`, `imageUrl`, and `description` are optional. Omitted `boothCategory` defaults to `ACTIVITY`.
 - Response: `BoothApplicationResponse`
+- A newly created `PENDING` application has `boothId: null`.
 
 `GET /api/booth-applications/me`
 
 - Auth: `BOOTH_MANAGER` or `FESTIVAL_ADMIN`
 - Response: `BoothApplicationResponse`
+- After approval, use the non-null `boothId` for the manager's booth editing, menu, and waiting-management routes.
 
 `GET /api/admin/booth-applications`
 
@@ -276,6 +279,7 @@ type FestivalDayResponse = {
 - Auth: `FESTIVAL_ADMIN`
 - Approves a `PENDING` application and creates the managed booth.
 - Response: `BoothApplicationResponse`
+- The approval response includes the generated booth ID in `boothId`; `PENDING` and `REJECTED` application responses keep it `null`.
 
 `POST /api/admin/booth-applications/{applicationId}/reject`
 

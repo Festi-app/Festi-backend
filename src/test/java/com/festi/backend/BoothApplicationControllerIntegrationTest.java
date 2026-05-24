@@ -60,6 +60,8 @@ class BoothApplicationControllerIntegrationTest {
 
     private UUID applicationId;
 
+    private UUID boothId;
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context)
@@ -67,6 +69,7 @@ class BoothApplicationControllerIntegrationTest {
                 .build();
         festivalId = UUID.randomUUID();
         applicationId = UUID.randomUUID();
+        boothId = UUID.randomUUID();
     }
 
     @Test
@@ -139,7 +142,8 @@ class BoothApplicationControllerIntegrationTest {
         mockMvc.perform(post("/api/admin/booth-applications/{applicationId}/approve", applicationId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("APPROVED"));
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.boothId").value(boothId.toString()));
 
         mockMvc.perform(post("/api/admin/booth-applications/{applicationId}/reject", applicationId)
                         .header("Authorization", "Bearer " + token)
@@ -184,6 +188,7 @@ class BoothApplicationControllerIntegrationTest {
                 applicationId,
                 festivalId,
                 BOOTH_MANAGER_ID,
+                status == BoothApplicationStatus.APPROVED ? boothId : null,
                 "Night Booth",
                 BoothType.NIGHT,
                 BoothCategory.ALCOHOL,

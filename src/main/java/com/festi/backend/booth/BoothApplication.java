@@ -12,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -64,6 +65,10 @@ public class BoothApplication extends BaseTimeEntity {
     @Column(name = "review_memo", columnDefinition = "TEXT")
     private String reviewMemo;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booth_id", unique = true)
+    private Booth booth;
+
     public BoothApplication(Festival festival, String applicantId, String boothName,
                             BoothType boothType, BoothCategory boothCategory,
                             String imageUrl, String description) {
@@ -76,7 +81,8 @@ public class BoothApplication extends BaseTimeEntity {
         this.description = description;
     }
 
-    public void approve() {
+    public void approve(Booth booth) {
+        this.booth = booth;
         this.status = BoothApplicationStatus.APPROVED;
     }
 

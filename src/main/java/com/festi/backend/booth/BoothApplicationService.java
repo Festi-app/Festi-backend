@@ -98,9 +98,9 @@ public class BoothApplicationService {
                 application.getImageUrl()
         );
         booth.assignManager(manager);
-        boothRepository.save(booth);
+        Booth savedBooth = boothRepository.save(booth);
 
-        application.approve();
+        application.approve(savedBooth);
         return BoothApplicationDTO.Response.from(application);
     }
 

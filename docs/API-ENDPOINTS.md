@@ -36,9 +36,11 @@
 | GET | `/api/booth-applications/me` | 현재 부스 관리자 계정의 신청 상태 조회 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 | GET | `/api/admin/booth-applications` | 부스 신청 목록 조회 | `FESTIVAL_ADMIN` |
 | GET | `/api/admin/booth-applications/{applicationId}` | 부스 신청 상세 조회 | `FESTIVAL_ADMIN` |
-| POST | `/api/admin/booth-applications/{applicationId}/approve` | 신청 승인 및 부스 생성 | `FESTIVAL_ADMIN` |
+| POST | `/api/admin/booth-applications/{applicationId}/approve` | 신청 승인 및 부스 생성. 응답의 `boothId`로 생성 부스를 식별한다. | `FESTIVAL_ADMIN` |
 | POST | `/api/admin/booth-applications/{applicationId}/reject` | 신청 거절. 선택 필드 `reviewMemo`를 받을 수 있다. | `FESTIVAL_ADMIN` |
 | DELETE | `/api/admin/booth-applications/{applicationId}` | 승인 전 또는 거절된 신청과 생성된 부스 관리자 계정을 삭제한다. | `FESTIVAL_ADMIN` |
+
+`BoothApplication` 응답의 `boothId`는 `PENDING` 또는 `REJECTED` 상태에서는 `null`이며, `APPROVED` 상태에서는 승인 과정에서 생성된 부스 ID이다.
 
 ## booths
 
