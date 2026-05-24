@@ -102,6 +102,9 @@ public class SecurityConfig {
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
 
                         // Festival Admin Only
+                        .requestMatchers(HttpMethod.POST, "/api/booths/admin/food-trucks").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/booths/admin/food-trucks/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/booths/admin/food-trucks/*").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/festival").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/festival/days").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/festival/days/*").hasRole("FESTIVAL_ADMIN")

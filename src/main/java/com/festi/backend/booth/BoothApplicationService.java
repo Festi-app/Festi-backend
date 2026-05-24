@@ -1,5 +1,6 @@
 package com.festi.backend.booth;
 
+import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.ConflictException;
 import com.festi.backend.common.exception.NotFoundException;
 import com.festi.backend.festival.Festival;
@@ -26,6 +27,10 @@ public class BoothApplicationService {
 
     @Transactional
     public BoothApplicationDTO.Response createApplication(BoothApplicationDTO.CreateRequest request) {
+        if (request.boothType() == BoothType.FOOD_TRUCK) {
+            throw new BadRequestException("Food truck booths must be registered by a festival admin.");
+        }
+
         Festival festival = detectFestival();
 
         if (userRepository.existsByIdAndFestivalId(request.id(), festival.getId())) {

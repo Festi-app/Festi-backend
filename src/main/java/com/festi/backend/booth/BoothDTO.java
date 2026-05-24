@@ -15,6 +15,7 @@ public final class BoothDTO {
             String name,
             BoothCategory category,
             BoothType type,
+            String description,
             String imageUrl,
             boolean isWaitingOpen
     ) {
@@ -24,10 +25,29 @@ public final class BoothDTO {
                     booth.getName(),
                     booth.getCategory(),
                     booth.getType(),
+                    booth.getDescription(),
                     booth.getImageUrl(),
                     booth.isWaitingOpen()
             );
         }
+    }
+
+    public record CreateFoodTruckRequest(
+            @NotBlank @Size(max = 100) String name,
+            BoothCategory category,
+            String description,
+            @Size(max = 100) String operatingHours,
+            @Size(max = 500) String imageUrl
+    ) {
+    }
+
+    public record UpdateFoodTruckRequest(
+            @Size(max = 100) String name,
+            BoothCategory category,
+            String description,
+            @Size(max = 100) String operatingHours,
+            @Size(max = 500) String imageUrl
+    ) {
     }
 
     public record UpdateRequest(
