@@ -15,6 +15,7 @@ public final class BoothDTO {
             String name,
             BoothCategory category,
             BoothType type,
+            String description,
             String imageUrl,
             boolean isWaitingOpen
     ) {
@@ -24,6 +25,7 @@ public final class BoothDTO {
                     booth.getName(),
                     booth.getCategory(),
                     booth.getType(),
+                    booth.getDescription(),
                     booth.getImageUrl(),
                     booth.isWaitingOpen()
             );
