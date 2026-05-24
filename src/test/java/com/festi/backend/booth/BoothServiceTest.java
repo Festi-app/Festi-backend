@@ -2,6 +2,8 @@ package com.festi.backend.booth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import com.festi.backend.common.exception.NotFoundException;
@@ -11,7 +13,9 @@ import com.festi.backend.festival.FestivalDayRepository;
 import com.festi.backend.festival.FestivalRepository;
 import com.festi.backend.location.BoothLocation;
 import com.festi.backend.location.BoothLocationRepository;
+import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
+import com.festi.backend.user.UserRole;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,13 +49,19 @@ class BoothServiceTest {
     private BoothService boothService;
 
     private Festival festival;
+    private AuthenticatedUser manager;
+    private AuthenticatedUser festivalAdmin;
 
     @BeforeEach
     void setUp() {
         boothService = new BoothService(boothRepository, boothLocationRepository, festivalRepository, festivalDayRepository, boothAuthorizationService);
         festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
         ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
+        manager = new AuthenticatedUser("manageruser", festival.getId(), UserRole.BOOTH_MANAGER);
+        festivalAdmin = new AuthenticatedUser("adminuser", festival.getId(), UserRole.FESTIVAL_ADMIN);
     }
+
+    // ── getBooths (no day) ───────────────────────────────────────────────────
 
     @Test
     void findBoothsByTypeAndCategoryWhenDayIsAbsent() {
@@ -62,6 +73,40 @@ class BoothServiceTest {
 
         assertThat(response).extracting(BoothDTO.Summary::name).containsExactly("night booth");
     }
+
+    @Test
+    void findBoothsByTypeOnlyWhenNoCategoryFilter() {
+        Booth b1 = booth(UUID.randomUUID(), "booth A", BoothCategory.ALCOHOL, BoothType.NIGHT);
+        Booth b2 = booth(UUID.randomUUID(), "booth B", BoothCategory.MARKET, BoothType.NIGHT);
+        when(boothRepository.findByType(BoothType.NIGHT)).thenReturn(List.of(b1, b2));
+
+        List<BoothDTO.Summary> response = boothService.getBooths(null, BoothType.NIGHT, null);
+
+        assertThat(response).hasSize(2);
+    }
+
+    @Test
+    void findBoothsByCategoryOnlyWhenNoTypeFilter() {
+        Booth b1 = booth(UUID.randomUUID(), "booth C", BoothCategory.MARKET, BoothType.DAY);
+        when(boothRepository.findByCategory(BoothCategory.MARKET)).thenReturn(List.of(b1));
+
+        List<BoothDTO.Summary> response = boothService.getBooths(null, null, BoothCategory.MARKET);
+
+        assertThat(response).extracting(BoothDTO.Summary::name).containsExactly("booth C");
+    }
+
+    @Test
+    void findAllBoothsWhenNoFilters() {
+        Booth b1 = booth(UUID.randomUUID(), "booth D", BoothCategory.ACTIVITY, BoothType.DAY);
+        Booth b2 = booth(UUID.randomUUID(), "booth E", BoothCategory.ALCOHOL, BoothType.NIGHT);
+        when(boothRepository.findAll()).thenReturn(List.of(b1, b2));
+
+        List<BoothDTO.Summary> response = boothService.getBooths(null, null, null);
+
+        assertThat(response).hasSize(2);
+    }
+
+    // ── getBooths (with day) ─────────────────────────────────────────────────
 
     @Test
     void filtersPlacedBoothsByDayAndCategory() {
@@ -87,6 +132,50 @@ class BoothServiceTest {
     }
 
     @Test
+    void throwsNotFoundWhenFestivalMissingOnDayQuery() {
+        LocalDate day = LocalDate.of(2026, 5, 20);
+        when(festivalRepository.findAll()).thenReturn(List.of());
+
+        assertThatThrownBy(() -> boothService.getBooths(day, null, null))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Festival not found");
+    }
+
+    @Test
+    void throwsNotFoundWhenFestivalDayMissingOnDayQuery() {
+        LocalDate day = LocalDate.of(2026, 5, 20);
+        when(festivalRepository.findAll()).thenReturn(List.of(festival));
+        when(festivalDayRepository.findByFestivalIdAndDay(festival.getId(), day))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> boothService.getBooths(day, null, null))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Festival day not found");
+    }
+
+    @Test
+    void excludesUnassignedLocationsFromDayQuery() {
+        LocalDate day = LocalDate.of(2026, 5, 18);
+        FestivalDay festivalDay = new FestivalDay(festival, day);
+        ReflectionTestUtils.setField(festivalDay, "id", UUID.randomUUID());
+
+        // booth 없이 빈 location
+        BoothLocation emptyLocation = new BoothLocation(festival, BoothType.NIGHT, festivalDay, "zone");
+
+        when(festivalRepository.findAll()).thenReturn(List.of(festival));
+        when(festivalDayRepository.findByFestivalIdAndDay(festival.getId(), day))
+                .thenReturn(Optional.of(festivalDay));
+        when(boothLocationRepository.findByDayOrderByIndex(festivalDay))
+                .thenReturn(List.of(emptyLocation));
+
+        List<BoothDTO.Summary> response = boothService.getBooths(day, null, null);
+
+        assertThat(response).isEmpty();
+    }
+
+    // ── getBooth ─────────────────────────────────────────────────────────────
+
+    @Test
     void returnsBoothDetailAndRejectsMissingBooth() {
         UUID boothId = UUID.randomUUID();
         Booth booth = booth(boothId, "detail booth", BoothCategory.EXPERIENCE, BoothType.DAY);
@@ -100,6 +189,83 @@ class BoothServiceTest {
         assertThatThrownBy(() -> boothService.getBooth(UUID.fromString("00000000-0000-0000-0000-000000000000")))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    // ── updateBooth ──────────────────────────────────────────────────────────
+
+    @Test
+    void updateBoothSucceeds() {
+        UUID boothId = UUID.randomUUID();
+        Booth booth = booth(boothId, "old name", BoothCategory.ALCOHOL, BoothType.NIGHT);
+        BoothDTO.UpdateRequest request = new BoothDTO.UpdateRequest(
+                "new name", BoothCategory.MARKET, "설명", "10:00~22:00", null);
+
+        when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+
+        BoothDTO.Detail response = boothService.updateBooth(manager, boothId, request);
+
+        assertThat(response.name()).isEqualTo("new name");
+        assertThat(response.category()).isEqualTo(BoothCategory.MARKET);
+    }
+
+    @Test
+    void updateBoothThrowsNotFoundForMissingBooth() {
+        UUID boothId = UUID.randomUUID();
+        BoothDTO.UpdateRequest request = new BoothDTO.UpdateRequest(
+                "name", BoothCategory.ACTIVITY, null, null, null);
+
+        when(boothRepository.findById(boothId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> boothService.updateBooth(manager, boothId, request))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Booth not found");
+    }
+
+    @Test
+    void updateBoothThrowsAccessDeniedWhenNotAuthorized() {
+        UUID boothId = UUID.randomUUID();
+        Booth booth = booth(boothId, "booth", BoothCategory.ALCOHOL, BoothType.NIGHT);
+        BoothDTO.UpdateRequest request = new BoothDTO.UpdateRequest(
+                "name", BoothCategory.ALCOHOL, null, null, null);
+
+        when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+        doThrow(new AccessDeniedException("Access is denied."))
+                .when(boothAuthorizationService).assertCanManageBooth(manager, booth);
+
+        assertThatThrownBy(() -> boothService.updateBooth(manager, boothId, request))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    // ── createFoodTruck ──────────────────────────────────────────────────────
+
+    @Test
+    void createFoodTruckSucceeds() {
+        BoothDTO.CreateFoodTruckRequest request = new BoothDTO.CreateFoodTruckRequest(
+                "푸드트럭A", BoothCategory.MARKET, "설명", "11:00~20:00", null);
+
+        Booth saved = booth(UUID.randomUUID(), "푸드트럭A", BoothCategory.MARKET, BoothType.FOOD_TRUCK);
+        when(boothRepository.save(any(Booth.class))).thenReturn(saved);
+
+        BoothDTO.Detail response = boothService.createFoodTruck(request);
+
+        assertThat(response.name()).isEqualTo("푸드트럭A");
+        assertThat(response.type()).isEqualTo(BoothType.FOOD_TRUCK);
+    }
+
+    @Test
+    void createFoodTruckDefaultsToActivityCategoryWhenNull() {
+        BoothDTO.CreateFoodTruckRequest request = new BoothDTO.CreateFoodTruckRequest(
+                "푸드트럭B", null, null, null, null);
+
+        Booth saved = booth(UUID.randomUUID(), "푸드트럭B", BoothCategory.ACTIVITY, BoothType.FOOD_TRUCK);
+        when(boothRepository.save(any(Booth.class))).thenReturn(saved);
+
+        BoothDTO.Detail response = boothService.createFoodTruck(request);
+
+        assertThat(response.type()).isEqualTo(BoothType.FOOD_TRUCK);
+        assertThat(response.category()).isEqualTo(BoothCategory.ACTIVITY);
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
 
     private Booth booth(UUID id, String name, BoothCategory category, BoothType type) {
         Booth booth = new Booth(name, category, type);
