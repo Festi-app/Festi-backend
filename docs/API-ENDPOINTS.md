@@ -47,6 +47,8 @@
 | GET | `/api/booths` | 부스 목록 조회. 선택 query: `day`, `type`, `category` | 인증 사용자 |
 | GET | `/api/booths/{boothId}` | 부스 상세 정보 조회 | 인증 사용자 |
 | POST | `/api/booths/{boothId}/waitings` | 특정 부스에 웨이팅 등록 | `USER` |
+| GET | `/api/booths/{boothId}/waitings` | 담당 부스의 active 웨이팅 목록 조회 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PATCH | `/api/booths/{boothId}/waitings/status` | 야간 부스의 웨이팅 접수 오픈/마감. `open`을 받는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 
 ## menu
 
@@ -77,6 +79,15 @@
 | --- | --- | --- | --- |
 | GET | `/api/waitings` | 본인 웨이팅 목록 조회 | `USER` |
 | DELETE | `/api/waitings/{waitingId}` | 본인 웨이팅 취소 | `USER` |
+| POST | `/api/waitings/{waitingId}/call` | active 웨이팅 호출 또는 재호출. 호출 횟수를 증가시킨다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PATCH | `/api/waitings/{waitingId}/status` | 호출된 웨이팅을 착석 처리. `status: "SEATED"`를 받는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+
+## push subscriptions
+
+| method | endpoint | 설명 | 권한 |
+| --- | --- | --- | --- |
+| POST | `/api/push-subscriptions` | Web Push 구독 등록 또는 갱신. `endpoint`, `keys.p256dh`, `keys.auth`를 받는다. | `USER` |
+| DELETE | `/api/push-subscriptions/{subscriptionId}` | 본인 Web Push 구독 해제 | `USER` |
 
 ## 축제 정보
 

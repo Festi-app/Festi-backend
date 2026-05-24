@@ -33,7 +33,7 @@ Festi는 대학교 축제 정보를 한곳에서 조회하고, 부스 운영 및
   - 축제 정보와 공지사항
   - 본인 웨이팅 목록
 
-관리자용 부스/메뉴/배치도 관리와 웨이팅 상태 변경 API는 이후 단계에서 추가할 예정입니다.
+관리자용 부스/메뉴/배치도 관리와 웨이팅 목록·호출·착석·오픈/마감 API, 사용자 Web Push 구독 저장 및 VAPID 기반 호출 알림 발송이 구현되어 있습니다.
 
 ## Roles
 
@@ -62,6 +62,17 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 | `FESTI_JWT_SECRET` | `local-dev-secret-change-me-at-least-32-bytes` | JWT HS256 서명 secret |
 | `FESTI_JWT_ACCESS_TOKEN_EXPIRATION` | `3600` | Access token 만료 시간, 초 단위 |
 | `FESTI_CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | 브라우저 요청을 허용할 origin 목록, 쉼표 구분 |
+| `FESTI_WEB_PUSH_ENABLED` | `false` | VAPID Web Push 전송 활성화 여부 |
+| `FESTI_VAPID_PUBLIC_KEY` | 빈 값 | Push 구독 및 발송에 사용하는 VAPID 공개키 |
+| `FESTI_VAPID_PRIVATE_KEY` | 빈 값 | Web Push 발송에 사용하는 VAPID 비밀키 |
+| `FESTI_VAPID_SUBJECT` | 빈 값 | VAPID contact subject, 예: `mailto:admin@example.com` |
+| `FESTI_WEB_PUSH_TTL_SECONDS` | `300` | Push provider가 메시지를 보관할 시간, 초 단위 |
+| `FESTI_WEB_PUSH_WORKER_ENABLED` | `true` | 저장된 Push outbox event를 발송하는 scheduler 활성화 여부 |
+| `FESTI_WEB_PUSH_POLL_DELAY_MILLIS` | `1000` | worker polling 간격, 밀리초 단위 |
+| `FESTI_WEB_PUSH_BATCH_SIZE` | `20` | 한 polling 주기에서 처리할 최대 event 수 |
+| `FESTI_WEB_PUSH_MAX_ATTEMPTS` | `2` | 일시 실패 event의 최대 처리 횟수 |
+| `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS` | `30` | 일시 실패 후 재처리까지 대기 시간, 초 단위 |
+| `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS` | `300` | 처리 중 중단된 event를 재회수할 lease 시간, 초 단위 |
 
 ### Run Tests
 
@@ -110,6 +121,17 @@ CREATE DATABASE festi OWNER festi_app;
 | `FESTI_JWT_SECRET` | Yes | 32바이트 이상 길이의 무작위 secret |
 | `FESTI_CORS_ALLOWED_ORIGINS` | Yes | `https://app.example.com` |
 | `FESTI_JWT_ACCESS_TOKEN_EXPIRATION` | Optional | `3600` |
+| `FESTI_WEB_PUSH_ENABLED` | Yes when Web Push is used | `true` |
+| `FESTI_VAPID_PUBLIC_KEY` | Yes when Web Push is enabled | VAPID 공개키 |
+| `FESTI_VAPID_PRIVATE_KEY` | Yes when Web Push is enabled | VAPID 비밀키 |
+| `FESTI_VAPID_SUBJECT` | Yes when Web Push is enabled | `mailto:admin@example.com` |
+| `FESTI_WEB_PUSH_TTL_SECONDS` | Optional | `300` |
+| `FESTI_WEB_PUSH_WORKER_ENABLED` | Optional | `true` |
+| `FESTI_WEB_PUSH_POLL_DELAY_MILLIS` | Optional | `1000` |
+| `FESTI_WEB_PUSH_BATCH_SIZE` | Optional | `20` |
+| `FESTI_WEB_PUSH_MAX_ATTEMPTS` | Optional | `2` |
+| `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS` | Optional | `30` |
+| `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS` | Optional | `300` |
 
 `FESTI_JWT_SECRET`은 로컬 기본값을 운영에서 절대 사용하지 말아야 합니다. 여러 origin을 허용해야 한다면 `FESTI_CORS_ALLOWED_ORIGINS`에 쉼표로 구분해 넣습니다.
 
@@ -122,6 +144,10 @@ export FESTI_DATABASE_PASSWORD='strong-db-password'
 export FESTI_JWT_SECRET='replace-with-a-random-secret-at-least-32-bytes'
 export FESTI_CORS_ALLOWED_ORIGINS='https://app.example.com'
 export FESTI_JWT_ACCESS_TOKEN_EXPIRATION='3600'
+export FESTI_WEB_PUSH_ENABLED='true'
+export FESTI_VAPID_PUBLIC_KEY='replace-with-vapid-public-key'
+export FESTI_VAPID_PRIVATE_KEY='replace-with-vapid-private-key'
+export FESTI_VAPID_SUBJECT='mailto:admin@example.com'
 ```
 
 ### 3. Build and Run
@@ -162,6 +188,7 @@ DB 접속 정보가 잘못되었거나 migration 권한이 부족하면 서버�
 - `GET /api/booths`
 - `GET /api/locations`
 - `POST /api/booths/{boothId}/waitings`
+- `POST /api/push-subscriptions`
 - `GET /api/festival`
 
 전체 API 목록은 [API 엔드포인트 문서](docs/API-ENDPOINTS.md)를 기준으로 관리합니다.
@@ -185,6 +212,8 @@ JWT 인증이 필요한 API를 Swagger UI에서 호출할 때는 `Authorize` 버
 - 사용자 `email`, `name`, `phone`은 필수값이며, 본인 정보 수정에서도 빈 값으로 바꿀 수 없습니다.
 - 본인 정보 수정은 `PATCH /api/users/me`에서 `email`, `name`, `phone`을 부분 수정할 수 있고, 성공 시 갱신된 사용자 정보와 새 access token을 함께 반환합니다.
 - 부스 관리자 권한은 단순 role뿐 아니라 담당 부스 여부까지 확인합니다.
+- 웨이팅 Push 알림의 표시 문구와 아이콘 경로(`title`, `body`, `icon`)는 `src/main/resources/push-messages.yml`에서 관리합니다.
+- 웨이팅 호출 API는 Push outbox event만 저장하며, scheduler worker가 커밋 이후 별도로 VAPID Web Push를 발송하고 delivery 결과를 기록합니다.
 
 ## Implementation Order
 
