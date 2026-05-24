@@ -30,6 +30,15 @@ public final class BoothDTO {
         }
     }
 
+    public record CreateFoodTruckRequest(
+            @NotBlank @Size(max = 100) String name,
+            BoothCategory category,
+            String description,
+            @Size(max = 100) String operatingHours,
+            @Size(max = 500) String imageUrl
+    ) {
+    }
+
     public record UpdateRequest(
             @NotBlank @Size(max = 100) String name,
             @NotNull BoothCategory category,

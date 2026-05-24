@@ -45,6 +45,14 @@ public class BoothService {
     }
 
     @Transactional
+    public BoothDTO.Detail createFoodTruck(BoothDTO.CreateFoodTruckRequest request) {
+        BoothCategory category = request.category() != null ? request.category() : BoothCategory.ACTIVITY;
+        Booth booth = new Booth(request.name(), category, BoothType.FOOD_TRUCK);
+        booth.update(request.name(), category, request.description(), request.operatingHours(), request.imageUrl());
+        return BoothDTO.Detail.from(boothRepository.save(booth));
+    }
+
+    @Transactional
     public BoothDTO.Detail updateBooth(AuthenticatedUser currentUser, UUID boothId,
                                        BoothDTO.UpdateRequest request) {
         Booth booth = boothRepository.findById(boothId)
