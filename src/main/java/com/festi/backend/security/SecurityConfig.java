@@ -121,6 +121,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/approve").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/reject").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/booth-applications/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/users").hasRole("FESTIVAL_ADMIN")
 
 
                         .anyRequest().denyAll()

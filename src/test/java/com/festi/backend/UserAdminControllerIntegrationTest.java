@@ -5,9 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -57,7 +54,7 @@ class UserAdminControllerIntegrationTest {
     }
 
     @Test
-    void adminEndpointsRequireFestivalAdmin() throws Exception {
+    void adminEndpointRequiresFestivalAdmin() throws Exception {
         when(userService.getUsersByRole(any(), any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/admin/users").param("role", "FESTIVAL_ADMIN"))
@@ -89,51 +86,6 @@ class UserAdminControllerIntegrationTest {
                 .andExpect(jsonPath("$[0].role").value("FESTIVAL_ADMIN"));
 
         verify(userService).getUsersByRole(eq(festivalId), eq(UserRole.FESTIVAL_ADMIN));
-    }
-
-    @Test
-    void adminCanUpdateUserRole() throws Exception {
-        UserDTO.Response updated = new UserDTO.Response("manager1", festivalId, "Manager", "01022222222", UserRole.FESTIVAL_ADMIN);
-        when(userService.updateUserRole(eq("manager1"), eq(festivalId), eq(UserRole.FESTIVAL_ADMIN)))
-                .thenReturn(updated);
-
-        mockMvc.perform(patch("/api/admin/users/manager1/role")
-                        .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"role":"FESTIVAL_ADMIN"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("manager1"))
-                .andExpect(jsonPath("$.role").value("FESTIVAL_ADMIN"));
-
-        verify(userService).updateUserRole(eq("manager1"), eq(festivalId), eq(UserRole.FESTIVAL_ADMIN));
-    }
-
-    @Test
-    void adminCanResetUserRole() throws Exception {
-        UserDTO.Response reset = new UserDTO.Response("admin1", festivalId, "Admin", "01033333333", UserRole.USER);
-        when(userService.resetUserRole(eq("admin1"), eq(festivalId)))
-                .thenReturn(reset);
-
-        mockMvc.perform(delete("/api/admin/users/admin1/role")
-                        .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("admin1"))
-                .andExpect(jsonPath("$.role").value("USER"));
-
-        verify(userService).resetUserRole(eq("admin1"), eq(festivalId));
-    }
-
-    @Test
-    void updateRoleRejectsMissingBody() throws Exception {
-        mockMvc.perform(patch("/api/admin/users/manager1/role")
-                        .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"role":null}
-                                """))
-                .andExpect(status().isBadRequest());
     }
 
     private String token(UserRole role) {

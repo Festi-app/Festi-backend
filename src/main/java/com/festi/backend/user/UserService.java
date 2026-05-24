@@ -1,6 +1,5 @@
 package com.festi.backend.user;
 
-import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.NotFoundException;
 import java.util.List;
 import java.util.UUID;
@@ -31,21 +30,6 @@ public class UserService {
         return userRepository.findByFestivalIdAndRole(festivalId, role).stream()
                 .map(UserDTO.Response::from)
                 .toList();
-    }
-
-    public UserDTO.Response updateUserRole(String userId, UUID festivalId, UserRole role) {
-        if (role == UserRole.USER) {
-            throw new BadRequestException("Use DELETE to reset a user's role.");
-        }
-        User user = findUser(userId, festivalId);
-        user.changeRole(role);
-        return UserDTO.Response.from(user);
-    }
-
-    public UserDTO.Response resetUserRole(String userId, UUID festivalId) {
-        User user = findUser(userId, festivalId);
-        user.changeRole(UserRole.USER);
-        return UserDTO.Response.from(user);
     }
 
     private User findUser(String userId, UUID festivalId) {

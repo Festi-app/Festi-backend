@@ -43,9 +43,4 @@ public final class UserDTO {
         }
     }
 
-    public record RoleUpdateRequest(
-            @jakarta.validation.constraints.NotNull
-            UserRole role
-    ) {
-    }
 }
