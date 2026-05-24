@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
-@EnableConfigurationProperties(WebPushProperties.class)
+@EnableConfigurationProperties({WebPushProperties.class, PushDeliveryWorkerProperties.class})
 public class WebPushConfig {
 
     @Bean

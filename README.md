@@ -67,6 +67,12 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 | `FESTI_VAPID_PRIVATE_KEY` | 빈 값 | Web Push 발송에 사용하는 VAPID 비밀키 |
 | `FESTI_VAPID_SUBJECT` | 빈 값 | VAPID contact subject, 예: `mailto:admin@example.com` |
 | `FESTI_WEB_PUSH_TTL_SECONDS` | `300` | Push provider가 메시지를 보관할 시간, 초 단위 |
+| `FESTI_WEB_PUSH_WORKER_ENABLED` | `true` | 저장된 Push outbox event를 발송하는 scheduler 활성화 여부 |
+| `FESTI_WEB_PUSH_POLL_DELAY_MILLIS` | `1000` | worker polling 간격, 밀리초 단위 |
+| `FESTI_WEB_PUSH_BATCH_SIZE` | `20` | 한 polling 주기에서 처리할 최대 event 수 |
+| `FESTI_WEB_PUSH_MAX_ATTEMPTS` | `2` | 일시 실패 event의 최대 처리 횟수 |
+| `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS` | `30` | 일시 실패 후 재처리까지 대기 시간, 초 단위 |
+| `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS` | `300` | 처리 중 중단된 event를 재회수할 lease 시간, 초 단위 |
 
 ### Run Tests
 
@@ -120,6 +126,12 @@ CREATE DATABASE festi OWNER festi_app;
 | `FESTI_VAPID_PRIVATE_KEY` | Yes when Web Push is enabled | VAPID 비밀키 |
 | `FESTI_VAPID_SUBJECT` | Yes when Web Push is enabled | `mailto:admin@example.com` |
 | `FESTI_WEB_PUSH_TTL_SECONDS` | Optional | `300` |
+| `FESTI_WEB_PUSH_WORKER_ENABLED` | Optional | `true` |
+| `FESTI_WEB_PUSH_POLL_DELAY_MILLIS` | Optional | `1000` |
+| `FESTI_WEB_PUSH_BATCH_SIZE` | Optional | `20` |
+| `FESTI_WEB_PUSH_MAX_ATTEMPTS` | Optional | `2` |
+| `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS` | Optional | `30` |
+| `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS` | Optional | `300` |
 
 `FESTI_JWT_SECRET`은 로컬 기본값을 운영에서 절대 사용하지 말아야 합니다. 여러 origin을 허용해야 한다면 `FESTI_CORS_ALLOWED_ORIGINS`에 쉼표로 구분해 넣습니다.
 
@@ -201,6 +213,7 @@ JWT 인증이 필요한 API를 Swagger UI에서 호출할 때는 `Authorize` 버
 - 본인 정보 수정은 `PATCH /api/users/me`에서 `email`, `name`, `phone`을 부분 수정할 수 있고, 성공 시 갱신된 사용자 정보와 새 access token을 함께 반환합니다.
 - 부스 관리자 권한은 단순 role뿐 아니라 담당 부스 여부까지 확인합니다.
 - 웨이팅 Push 알림의 표시 문구와 아이콘 경로(`title`, `body`, `icon`)는 `src/main/resources/push-messages.yml`에서 관리합니다.
+- 웨이팅 호출 API는 Push outbox event만 저장하며, scheduler worker가 커밋 이후 별도로 VAPID Web Push를 발송하고 delivery 결과를 기록합니다.
 
 ## Implementation Order
 

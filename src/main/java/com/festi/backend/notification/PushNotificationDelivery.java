@@ -55,6 +55,9 @@ public class PushNotificationDelivery {
     @Column(name = "failure_reason", columnDefinition = "TEXT")
     private String failureReason;
 
+    @Column(nullable = false)
+    private boolean retryable;
+
     @Column(name = "attempted_at")
     private OffsetDateTime attemptedAt;
 
@@ -75,10 +78,11 @@ public class PushNotificationDelivery {
         this.attemptedAt = attemptedAt;
     }
 
-    public void markFailed(Integer responseStatus, String failureReason, OffsetDateTime attemptedAt) {
+    public void markFailed(Integer responseStatus, String failureReason, boolean retryable, OffsetDateTime attemptedAt) {
         this.status = PushNotificationDeliveryStatus.FAILED;
         this.responseStatus = responseStatus;
         this.failureReason = failureReason;
+        this.retryable = retryable;
         this.attemptedAt = attemptedAt;
     }
 }

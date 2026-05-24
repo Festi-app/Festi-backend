@@ -2,6 +2,8 @@ package com.festi.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.festi.backend.notification.WaitingNotificationEventRepository;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,9 @@ class PostgresMigrationApplicationTests {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private WaitingNotificationEventRepository notificationEventRepository;
 
     @Test
     void appliesFlywayMigrationsAndValidatesSchema() {
@@ -42,9 +47,25 @@ class PostgresMigrationApplicationTests {
             """,
             Integer.class
         );
+        Integer outboxColumnCount = jdbcTemplate.queryForObject(
+            """
+            select count(*)
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'waiting_notification_events'
+              and column_name in ('status', 'attempt_count', 'available_at', 'processing_started_at', 'processed_at', 'failure_reason')
+            """,
+            Integer.class
+        );
 
         assertThat(appliedMigrationCount).isGreaterThan(0);
         assertThat(phoneNullable).isEqualTo("NO");
         assertThat(notificationTableCount).isEqualTo(3);
+        assertThat(outboxColumnCount).isEqualTo(6);
+    }
+
+    @Test
+    void outboxClaimQueryCanRunAgainstPostgresEnumStatus() {
+        assertThat(notificationEventRepository.findNextAvailableForUpdate(OffsetDateTime.now())).isEmpty();
     }
 }

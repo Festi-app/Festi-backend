@@ -20,3 +20,7 @@ festi:
     access-token-expiration: 3600
   cors:
     allowed-origins: http://localhost:3000
+  push:
+    delivery:
+      worker:
+        enabled: false

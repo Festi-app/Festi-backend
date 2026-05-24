@@ -85,7 +85,7 @@ public class WaitingService {
             throw new BadRequestException("Only active waitings can be called.");
         }
         waiting.call();
-        waitingNotificationService.notifyCalled(waiting);
+        waitingNotificationService.enqueueCalled(waiting);
         return WaitingDTO.Response.from(waiting);
     }
 

@@ -34,6 +34,7 @@ sequenceDiagram
     participant User as "USER Browser"
     participant SW as "Service Worker"
     participant API as "Festi Backend"
+    participant Worker as "Push Outbox Worker"
     participant Manager as "Booth Manager"
     participant Push as "Browser Push Service"
 
@@ -42,8 +43,10 @@ sequenceDiagram
     User->>SW: pushManager.subscribe(VAPID public key)
     User->>API: POST /api/push-subscriptions (JWT, USER)
     Manager->>API: POST /api/waitings/{waitingId}/call
-    API->>API: CALLED 이벤트와 payload snapshot 저장
-    API->>Push: VAPID Web Push 전송
+    API->>API: PENDING CALLED event와 payload snapshot 저장
+    API-->>Manager: waiting 호출 응답
+    Worker->>API: PENDING event claim
+    Worker->>Push: VAPID Web Push 전송
     Push-->>SW: push event + payload
     SW->>User: showNotification(title, body, icon)
     User->>SW: notificationclick
@@ -51,7 +54,7 @@ sequenceDiagram
     User->>API: GET /api/waitings (JWT, USER)
 ```
 
-백엔드는 운영자의 호출 API 처리 중 Push 서비스로의 발송을 동기적으로 시도한다. 브라우저 Push 서비스가 이후 service worker에 실제 알림을 전달하는 과정은 브라우저와 Push 서비스가 처리한다.
+백엔드는 운영자의 호출 API 트랜잭션에서 waiting 변경과 Push outbox event 저장만 수행한다. 별도 scheduler worker가 커밋된 event를 가져와 Push 서비스로 발송하므로, 호출 API 응답 시간은 외부 Push 요청 대기 시간과 분리된다. 브라우저 Push 서비스가 이후 service worker에 실제 알림을 전달하는 과정은 브라우저와 Push 서비스가 처리한다.
 
 ## 3. API Contract
 
@@ -153,7 +156,7 @@ Push payload 자체에는 현재 웨이팅 상태 전체가 포함되지 않는�
 
 백엔드는 VAPID 공개키를 반환하는 API를 구현하지 않았다. 프론트엔드 배포 환경에 공개키를 주입하고, 백엔드의 `FESTI_VAPID_PUBLIC_KEY`와 동일한 값인지 운영 설정에서 관리해야 한다.
 
-추가로 백엔드에서 `FESTI_WEB_PUSH_ENABLED=false`이면 구독 등록 API는 사용할 수 있지만 실제 outbound Push는 발송되지 않는다. 프론트엔드가 정상 등록되었다고 해서 개발 또는 운영 환경에서 실제 알림 수신까지 보장되는 것은 아니다.
+추가로 백엔드에서 `FESTI_WEB_PUSH_ENABLED=false`이면 구독 등록 API는 사용할 수 있지만 worker가 실제 outbound Push를 성공시키지 못하고 실패 delivery를 기록한다. worker 자체가 비활성화되어 있으면 event는 발송 대기 상태로 남는다. 프론트엔드가 정상 등록되었다고 해서 개발 또는 운영 환경에서 실제 알림 수신까지 보장되는 것은 아니다.
 
 ## 6. Frontend Implementation Steps
 
@@ -353,7 +356,7 @@ Push 수신 또는 알림 클릭 이후 화면은 다음 원칙으로 동작해�
 | 구독 등록 API `400` | 브라우저 subscription 변환 및 필수 key 전달 여부 점검 |
 | 구독 등록 API `404` | 인증 사용자 또는 소속 축제 문맥을 서버에서 찾지 못한 상태로 처리하고 운영 점검 대상으로 기록 |
 | 구독 삭제 API `404` | 서버 측 구독이 이미 없을 수 있으므로 로컬 unsubscribe 처리 가능 |
-| 등록 성공 후 알림이 오지 않음 | 프론트엔드에서 delivery 상태를 조회할 API는 없음. 권한, 브라우저 구독, 배포 VAPID 공개키, 백엔드 Push enable/config를 운영 점검 대상으로 취급 |
+| 등록 성공 후 알림이 오지 않음 | 프론트엔드에서 delivery 상태를 조회할 API는 없음. 권한, 브라우저 구독, 배포 VAPID 공개키, 백엔드 Push/worker enable 및 outbox 처리 상태를 운영 점검 대상으로 취급 |
 | 기존 구독이 브라우저에서 사라짐 | 앱 재진입 또는 알림 설정 화면에서 새 구독을 만들고 서버에 다시 등록 |
 
 ## 12. Implementation Checklist
@@ -368,7 +371,7 @@ Push 수신 또는 알림 클릭 이후 화면은 다음 원칙으로 동작해�
 - [ ] Service worker의 `notificationclick` handler가 같은 origin의 `/waitings`를 연다.
 - [ ] 웨이팅 화면 진입 시 `GET /api/waitings`로 최신 상태를 다시 조회한다.
 - [ ] 알림 해제 시 서버 구독 삭제와 브라우저 `unsubscribe()`를 모두 처리한다.
-- [ ] 실제 Push 검증 환경에서는 백엔드 `FESTI_WEB_PUSH_ENABLED=true`와 VAPID 설정이 준비되어 있는지 확인한다.
+- [ ] 실제 Push 검증 환경에서는 백엔드 `FESTI_WEB_PUSH_ENABLED=true`, outbox worker 활성화, VAPID 설정이 준비되어 있는지 확인한다.
 
 ## 13. Backend Implementation References
 
@@ -379,6 +382,8 @@ Push 수신 또는 알림 클릭 이후 화면은 다음 원칙으로 동작해�
 | 구독 저장/endpoint 재귀속 | `src/main/java/com/festi/backend/notification/PushSubscriptionService.java` |
 | Push payload 필드 | `src/main/java/com/festi/backend/notification/PushNotificationPayload.java` |
 | 웨이팅 호출 알림 처리 | `src/main/java/com/festi/backend/notification/WaitingNotificationService.java` |
+| Outbox claim과 결과 저장 | `src/main/java/com/festi/backend/notification/WaitingNotificationOutboxCoordinator.java` |
+| Scheduler 발송 worker | `src/main/java/com/festi/backend/notification/WaitingNotificationDeliveryWorker.java` |
 | 실제 Web Push/VAPID 발송 | `src/main/java/com/festi/backend/notification/VapidWebPushSender.java` |
 | 메시지 표시 텍스트와 아이콘 | `src/main/resources/push-messages.yml` |
 | Web Push 환경 설정 | `src/main/resources/application.yml` |

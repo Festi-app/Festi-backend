@@ -545,7 +545,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 ## Priority 12: Booth Manager Waiting Operations and Notifications
 
-일반 사용자의 웨이팅 등록/조회/취소, 부스 관리자의 운영 목록/호출/착석/접수 상태 변경, 사용자의 Web Push 구독 관리, 호출 Push 발송 및 발송 결과 기록이 현재 코드에 구현되어 있다.
+일반 사용자의 웨이팅 등록/조회/취소, 부스 관리자의 운영 목록/호출/착석/접수 상태 변경, 사용자의 Web Push 구독 관리, 호출 Push outbox 적재와 scheduler 기반 발송 및 결과 기록이 현재 코드에 구현되어 있다.
 
 ### Implemented Runtime Scope
 
@@ -563,8 +563,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 | --- | --- | --- |
 | `Waiting` | `waitings` | 부스와 composite-key 사용자를 연결하는 웨이팅. `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`을 보유한다. |
 | `PushSubscription` | `push_subscriptions` | 사용자 브라우저의 Web Push 구독. `endpoint`, `p256dhKey`, `authKey`와 사용자를 저장하며 `endpoint`는 전역 unique다. |
-| `WaitingNotificationEvent` | `waiting_notification_events` | 한 번의 호출/재호출로 생성된 알림 의도와 payload snapshot. `eventType`, `title`, `body`, `icon`, `url`, `createdAt`을 저장한다. |
-| `PushNotificationDelivery` | `push_notification_deliveries` | event를 한 subscription endpoint로 보낸 한 번의 시도. `status`, `responseStatus`, `failureReason`, `attemptedAt`, `createdAt`을 저장한다. |
+| `WaitingNotificationEvent` | `waiting_notification_events` | 한 번의 호출/재호출로 생성된 outbox event와 payload snapshot. `eventType`, `title`, `body`, `icon`, `url`, `status`, `attemptCount`, `availableAt`, `processingStartedAt`, `processedAt`, `failureReason`, `createdAt`을 저장한다. |
+| `PushNotificationDelivery` | `push_notification_deliveries` | event를 한 subscription endpoint로 보낸 한 번의 시도. `status`, `responseStatus`, `failureReason`, `retryable`, `attemptedAt`, `createdAt`을 저장한다. |
 
 #### DTOs And Payload Models
 
@@ -584,9 +584,11 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 | Model | 값 또는 필드 | 용도 |
 | --- | --- | --- |
 | `WaitingStatus` | `WAITING`, `CALLED`, `SEATED`, `CANCELLED` | 웨이팅 생명주기 상태다. |
+| `WaitingNotificationEventStatus` | `PENDING`, `PROCESSING`, `COMPLETED`, `RETRY_WAIT`, `FAILED` | outbox event의 처리/재처리 상태다. |
 | `PushNotificationDeliveryStatus` | `PENDING`, `SENT`, `FAILED` | 구독별 전송 시도의 상태다. |
 | `PushMessageProperties.PushMessageTemplate` | `title`, `body`, `icon` | `push-messages.yml`의 `festi.push.messages.called` 표시 템플릿을 바인딩한다. |
 | `WebPushProperties` | `enabled`, `publicKey`, `privateKey`, `subject`, `ttlSeconds` | `festi.push.delivery` 설정을 바인딩하고 VAPID 발송 활성화 여부를 결정한다. |
+| `PushDeliveryWorkerProperties` | `enabled`, `pollDelayMillis`, `batchSize`, `maxAttempts`, `retryDelaySeconds`, `processingTimeoutSeconds` | outbox scheduler의 실행, batch, 재시도, processing lease 만료 기준을 바인딩한다. |
 
 ### Implemented Endpoints
 
@@ -598,7 +600,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 | `GET` | `/api/waitings` | 본인 웨이팅 목록 조회 | 예 | `USER` | `200 List<WaitingDTO.Response>` |
 | `DELETE` | `/api/waitings/{waitingId}` | 본인 active waiting 취소 | 예 | `USER` | `204` |
 | `GET` | `/api/booths/{boothId}/waitings` | 담당 부스의 active waiting 목록 조회 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `200 List<WaitingDTO.Response>` |
-| `POST` | `/api/waitings/{waitingId}/call` | active waiting 호출 또는 재호출 및 Push 알림 생성/발송 시도 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `200 WaitingDTO.Response` |
+| `POST` | `/api/waitings/{waitingId}/call` | active waiting 호출 또는 재호출 및 Push outbox event 생성 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `200 WaitingDTO.Response` |
 | `PATCH` | `/api/waitings/{waitingId}/status` | `CALLED` waiting을 착석 처리 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `WaitingDTO.StatusRequest` -> `200 WaitingDTO.Response` |
 | `PATCH` | `/api/booths/{boothId}/waitings/status` | `NIGHT` 부스 웨이팅 접수 오픈/마감 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `WaitingDTO.OpenStatusRequest` -> `200 BoothDTO.Detail` |
 | `POST` | `/api/push-subscriptions` | 본인의 Web Push 구독 등록 또는 갱신 | 예 | `USER` | `PushSubscriptionDTO.Request` -> `201 PushSubscriptionDTO.Response` |
@@ -617,19 +619,21 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 1. 사용자의 브라우저는 서버가 발송에 사용하는 VAPID 공개키와 동일한 공개키로 Web Push subscription을 생성하고 `POST /api/push-subscriptions`로 endpoint와 암호화 key를 등록한다. 현재 백엔드에는 VAPID 공개키를 조회하는 endpoint가 없다.
 2. `PushSubscriptionService`는 `endpoint`를 전역 unique로 취급한다. 같은 브라우저 endpoint가 다시 등록되면 최신 로그인 사용자와 key로 재바인딩하여 공유 기기에서 이전 계정으로 알림이 계속 가는 상황을 피한다.
-3. `POST /api/waitings/{waitingId}/call`이 성공적으로 처리되는 흐름에서 `WaitingService`는 waiting을 호출 상태로 변경한 뒤 `WaitingNotificationService.notifyCalled(...)`를 호출한다. 호출과 재호출은 각각 별도의 `CALLED` 알림 event를 만든다.
-4. `WaitingNotificationService`는 `push-messages.yml`의 `called.title`, `called.body`, `called.icon`과 코드에 정의된 클릭 경로 `/waitings`를 결합해 `PushNotificationPayload` 및 `WaitingNotificationEvent` snapshot을 생성한다.
-5. event가 생성되면 해당 사용자의 현재 `PushSubscription` 목록을 조회한다. 등록된 구독이 없으면 event만 저장되고 delivery는 생성되지 않는다.
-6. 구독이 있으면 구독별로 `WebPushSender`가 호출된다. `FESTI_WEB_PUSH_ENABLED=false`이면 `DisabledWebPushSender`가 외부 요청 없이 `FAILED` delivery를 만들고, true이면 VAPID 설정을 사용하는 `VapidWebPushSender`가 암호화된 Web Push 요청을 보낸다.
-7. 각 전송 시도는 별도 `PushNotificationDelivery`로 남는다. `2xx` 응답은 `SENT`, 비재시도 실패는 `FAILED`다. `429` 또는 `5xx` 응답과 interruption 이외의 sender exception은 같은 event/subscription에 대해 즉시 한 번 더 시도하며, `InterruptedException`은 실패로 기록하고 재시도하지 않는다.
-8. 현재 발송은 관리자 호출 API 처리 중 동기적으로 실행된다. 따라서 전송 시도와 즉시 재시도가 끝난 뒤 호출 API 응답이 반환되며, event/delivery 저장은 호출 처리 트랜잭션에 참여한다.
-9. Push payload는 상태 전체를 동기화하는 응답이 아니다. 백엔드가 제공하는 계약은 프론트엔드 service worker가 `title`, `body`, `icon`으로 알림을 표시하고 클릭 시 `url`인 `/waitings`로 이동시키는 데 사용할 값이며, 최신 waiting 상태는 클라이언트가 `GET /api/waitings`로 다시 조회한다.
+3. `POST /api/waitings/{waitingId}/call` 처리에서 `WaitingService`는 waiting을 호출 상태로 변경한 뒤 `WaitingNotificationService.enqueueCalled(...)`로 `PENDING` 상태의 `CALLED` outbox event를 같은 트랜잭션에 저장한다. 호출과 재호출은 각각 별도의 event를 만든다.
+4. event에는 `push-messages.yml`의 `called.title`, `called.body`, `called.icon`과 코드에 정의된 클릭 경로 `/waitings`가 payload snapshot으로 저장된다. 호출 API는 외부 Push 요청을 수행하지 않고 waiting 변경과 event 저장이 커밋되면 응답한다.
+5. `WaitingNotificationDeliveryScheduler`는 설정된 polling 주기마다 처리 가능한 event를 조회한다. `WaitingNotificationOutboxCoordinator`는 PostgreSQL `FOR UPDATE SKIP LOCKED`로 event를 claim하고 `PROCESSING`으로 전환하여 여러 worker가 같은 event를 동시에 가져가지 않게 한다.
+6. worker는 claim 트랜잭션이 종료된 뒤 해당 사용자의 현재 `PushSubscription`을 대상으로 `WebPushSender`를 호출한다. 따라서 VAPID HTTP 요청을 기다리는 동안 호출 API 트랜잭션이나 claim 트랜잭션을 열어 두지 않는다.
+7. 각 endpoint별 시도는 먼저 `PENDING` `PushNotificationDelivery`로 저장되고, 전송 후 `SENT` 또는 `FAILED` 및 `retryable` 여부가 기록된다. 이미 terminal 결과가 있는 endpoint는 event 재처리에서 다시 발송하지 않는다.
+8. `429`, `5xx`, interruption 이외의 transport exception은 event를 `RETRY_WAIT`로 두고 지연 후 다시 처리한다. 최대 처리 횟수를 넘긴 일시 실패 또는 interruption은 event를 `FAILED`로 종료한다. 비재시도 delivery만 존재하거나 모든 대상 전송이 완료되면 event는 `COMPLETED`가 된다.
+9. worker가 `PROCESSING` 중 종료되면 processing lease 만료 후 event를 다시 `RETRY_WAIT`로 회수한다. 이미 외부 전송이 성공했지만 결과 저장 전에 프로세스가 종료된 극단적 경우에는 Web Push 특성상 재처리로 중복 알림 가능성이 남는다.
+10. Push payload는 상태 전체를 동기화하는 응답이 아니다. 백엔드가 제공하는 계약은 프론트엔드 service worker가 `title`, `body`, `icon`으로 알림을 표시하고 클릭 시 `url`인 `/waitings`로 이동시키는 데 사용할 값이며, 최신 waiting 상태는 클라이언트가 `GET /api/waitings`로 다시 조회한다.
 
 ### Persistence And Configuration Notes
 
-- `waiting_notification_events`는 사용자에게 전달하려던 메시지 snapshot을 보존하고, `push_notification_deliveries`는 구독 endpoint별 실제 시도와 결과를 보존한다. 하나의 event에는 다수 기기 또는 1회 즉시 재시도로 여러 delivery가 연결될 수 있다.
+- `waiting_notification_events`는 사용자에게 전달하려던 메시지 snapshot과 outbox 처리 상태를 보존하고, `push_notification_deliveries`는 구독 endpoint별 실제 시도와 결과를 보존한다. 하나의 event에는 다수 기기 또는 지연 재시도로 여러 delivery가 연결될 수 있다.
 - 표시 문자열과 아이콘 경로는 `src/main/resources/push-messages.yml`의 `title`, `body`, `icon`만 변경해 수정할 수 있다. 클릭 경로 `url`은 설정 필드가 아니라 코드 계약이다.
 - 실제 Web Push 전송을 활성화하려면 `FESTI_WEB_PUSH_ENABLED=true`와 `FESTI_VAPID_PUBLIC_KEY`, `FESTI_VAPID_PRIVATE_KEY`, `FESTI_VAPID_SUBJECT`가 필요하다. TTL은 `FESTI_WEB_PUSH_TTL_SECONDS`로 설정한다.
+- outbox worker는 기본 활성화되며 `FESTI_WEB_PUSH_WORKER_ENABLED`, `FESTI_WEB_PUSH_POLL_DELAY_MILLIS`, `FESTI_WEB_PUSH_BATCH_SIZE`, `FESTI_WEB_PUSH_MAX_ATTEMPTS`, `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS`, `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS`로 실행과 재처리 정책을 조정한다.
 
 ## Priority 13: Test Coverage
 
@@ -668,6 +672,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `NotificationPersistenceModelTest`
 - `PushMessagePropertiesTest`
 - `WaitingNotificationServiceTest`
+- `WaitingNotificationOutboxCoordinatorTest`
+- `WaitingNotificationDeliveryWorkerTest`
 - `VapidWebPushSenderTest`
 - `RepositoryFetchPlanTest`
 - `GlobalExceptionHandlerTest`

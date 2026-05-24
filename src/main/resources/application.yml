@@ -32,3 +32,10 @@ festi:
       private-key: ${FESTI_VAPID_PRIVATE_KEY:}
       subject: ${FESTI_VAPID_SUBJECT:}
       ttl-seconds: ${FESTI_WEB_PUSH_TTL_SECONDS:300}
+      worker:
+        enabled: ${FESTI_WEB_PUSH_WORKER_ENABLED:true}
+        poll-delay-millis: ${FESTI_WEB_PUSH_POLL_DELAY_MILLIS:1000}
+        batch-size: ${FESTI_WEB_PUSH_BATCH_SIZE:20}
+        max-attempts: ${FESTI_WEB_PUSH_MAX_ATTEMPTS:2}
+        retry-delay-seconds: ${FESTI_WEB_PUSH_RETRY_DELAY_SECONDS:30}
+        processing-timeout-seconds: ${FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS:300}

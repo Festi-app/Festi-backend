@@ -144,7 +144,7 @@ class WaitingServiceTest {
         assertThat(response.status()).isEqualTo(WaitingStatus.CALLED);
         assertThat(response.callCount()).isEqualTo((short) 1);
         verify(boothAuthorizationService).assertCanManageBooth(manager, booth);
-        verify(waitingNotificationService).notifyCalled(waiting);
+        verify(waitingNotificationService).enqueueCalled(waiting);
     }
 
     @Test
@@ -160,7 +160,7 @@ class WaitingServiceTest {
 
         assertThat(response.status()).isEqualTo(WaitingStatus.CALLED);
         assertThat(response.callCount()).isEqualTo((short) 2);
-        verify(waitingNotificationService).notifyCalled(waiting);
+        verify(waitingNotificationService).enqueueCalled(waiting);
     }
 
     @Test
