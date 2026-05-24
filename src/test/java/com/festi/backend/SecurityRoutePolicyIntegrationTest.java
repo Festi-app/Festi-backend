@@ -135,7 +135,7 @@ class SecurityRoutePolicyIntegrationTest {
     void boothManagersPassBoothManagerGate() throws Exception {
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -146,7 +146,7 @@ class SecurityRoutePolicyIntegrationTest {
 
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isBadRequest());
     }
 
     @Test

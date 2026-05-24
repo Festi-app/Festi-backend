@@ -1,5 +1,8 @@
 package com.festi.backend.booth;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public final class BoothDTO {
@@ -25,6 +28,15 @@ public final class BoothDTO {
                     booth.isWaitingOpen()
             );
         }
+    }
+
+    public record UpdateRequest(
+            @NotBlank @Size(max = 100) String name,
+            @NotNull BoothCategory category,
+            String description,
+            @Size(max = 100) String operatingHours,
+            @Size(max = 500) String imageUrl
+    ) {
     }
 
     public record Detail(
