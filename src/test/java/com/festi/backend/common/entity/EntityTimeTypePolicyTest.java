@@ -15,10 +15,11 @@ import com.festi.backend.user.User;
 import com.festi.backend.waiting.Waiting;
 import java.lang.reflect.Field;
 import java.time.OffsetDateTime;
-import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 class EntityTimeTypePolicyTest {
 
@@ -38,19 +39,29 @@ class EntityTimeTypePolicyTest {
     );
 
     @Test
-    void everyTemporalEntityFieldUsesOffsetDateTime() {
-        List<String> mismatches = ENTITY_TIME_OWNERS.stream()
+    void everyAuditingEntityFieldUsesOffsetDateTime() {
+        List<DeclaredField> auditingFields = ENTITY_TIME_OWNERS.stream()
                 .flatMap(type -> Arrays.stream(type.getDeclaredFields())
                         .map(field -> new DeclaredField(type, field)))
-                .filter(declared -> TemporalAccessor.class.isAssignableFrom(declared.field().getType()))
+                .filter(declared -> isAuditingField(declared.field()))
+                .toList();
+        List<String> mismatches = auditingFields.stream()
                 .filter(declared -> declared.field().getType() != OffsetDateTime.class)
                 .map(declared -> declared.owner().getSimpleName() + "." + declared.field().getName()
                         + " uses " + declared.field().getType().getSimpleName())
                 .toList();
 
+        assertThat(auditingFields)
+                .as("Auditing fields must be discovered from the current entity mappings")
+                .isNotEmpty();
         assertThat(mismatches)
-                .as("All temporal fields in persisted entity mappings must use OffsetDateTime")
+                .as("All auditing fields in persisted entity mappings must use OffsetDateTime")
                 .isEmpty();
+    }
+
+    private boolean isAuditingField(Field field) {
+        return field.isAnnotationPresent(CreatedDate.class)
+                || field.isAnnotationPresent(LastModifiedDate.class);
     }
 
     private record DeclaredField(Class<?> owner, Field field) {
