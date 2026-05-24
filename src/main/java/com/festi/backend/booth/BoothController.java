@@ -20,6 +20,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -84,11 +85,43 @@ public class BoothController {
             @ApiResponse(responseCode = "401", description = "Authentication is required"),
             @ApiResponse(responseCode = "403", description = "FESTIVAL_ADMIN role is required")
     })
-    @PostMapping("/food-trucks")
+    @PostMapping("/admin/food-trucks")
     public ResponseEntity<BoothDTO.Detail> createFoodTruck(
             @Valid @RequestBody BoothDTO.CreateFoodTruckRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(boothService.createFoodTruck(request));
+    }
+
+    @Operation(summary = "Update food truck", description = "Updates food truck information. Only a festival admin can call this endpoint. All fields are optional — only provided fields are updated.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Food truck updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body or booth is not a food truck"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "FESTIVAL_ADMIN role is required"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found")
+    })
+    @PatchMapping("/admin/food-trucks/{boothId}")
+    public ResponseEntity<BoothDTO.Detail> updateFoodTruck(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Valid @RequestBody BoothDTO.UpdateFoodTruckRequest request
+    ) {
+        return ResponseEntity.ok(boothService.updateFoodTruck(boothId, request));
+    }
+
+    @Operation(summary = "Delete food truck", description = "Deletes a food truck booth. Only a festival admin can call this endpoint.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Food truck deleted"),
+            @ApiResponse(responseCode = "400", description = "Booth is not a food truck"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "FESTIVAL_ADMIN role is required"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found")
+    })
+    @DeleteMapping("/admin/food-trucks/{boothId}")
+    public ResponseEntity<Void> deleteFoodTruck(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId
+    ) {
+        boothService.deleteFoodTruck(boothId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Update booth", description = "Updates booth information. Only the assigned booth manager or a festival admin can update a booth.")
