@@ -36,7 +36,7 @@ public class MenuService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        assertNightBooth(booth);
+        assertMenuManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.save(
                 new MenuItem(booth, request.name(), request.price(),
                         request.description(), request.imageUrl(), request.sortOrder()));
@@ -49,7 +49,7 @@ public class MenuService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        assertNightBooth(booth);
+        assertMenuManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
         menuItem.update(request.name(), request.price(), request.description(),
@@ -78,9 +78,9 @@ public class MenuService {
         return MenuDTO.Response.from(menuItem);
     }
 
-    private void assertNightBooth(Booth booth) {
-        if (booth.getType() != BoothType.NIGHT) {
-            throw new BadRequestException("Menu management is only allowed for NIGHT booths.");
+    private void assertMenuManageableBooth(Booth booth) {
+        if (booth.getType() != BoothType.NIGHT && booth.getType() != BoothType.FOOD_TRUCK) {
+            throw new BadRequestException("Menu management is only allowed for NIGHT and FOOD_TRUCK booths.");
         }
     }
 }
