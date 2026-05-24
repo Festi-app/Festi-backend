@@ -33,8 +33,18 @@ class PostgresMigrationApplicationTests {
             """,
             String.class
         );
+        Integer notificationTableCount = jdbcTemplate.queryForObject(
+            """
+            select count(*)
+            from information_schema.tables
+            where table_schema = 'public'
+              and table_name in ('push_subscriptions', 'waiting_notification_events', 'push_notification_deliveries')
+            """,
+            Integer.class
+        );
 
         assertThat(appliedMigrationCount).isGreaterThan(0);
         assertThat(phoneNullable).isEqualTo("NO");
+        assertThat(notificationTableCount).isEqualTo(3);
     }
 }

@@ -77,6 +77,21 @@ public class BoothController {
         return ResponseEntity.ok(boothService.getBooth(boothId));
     }
 
+    @Operation(summary = "List active booth waitings", description = "Returns active waiting registrations for a managed booth in registration order.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Active waiting list retrieved"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found")
+    })
+    @GetMapping("/{boothId}/waitings")
+    public ResponseEntity<List<WaitingDTO.Response>> getActiveWaitings(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        return ResponseEntity.ok(waitingService.getActiveWaitings(currentUser, boothId));
+    }
+
     @Operation(summary = "Update booth", description = "Updates booth information. Only the assigned booth manager or a festival admin can update a booth.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Booth updated"),
@@ -97,19 +112,37 @@ public class BoothController {
     @Operation(summary = "Register waiting", description = "Registers the authenticated user for a waiting slot at the specified booth.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Waiting registered"),
-            @ApiResponse(responseCode = "400", description = "Booth is not a NIGHT booth, waiting is closed, or user has reached the maximum of 3 active waitings"),
+            @ApiResponse(responseCode = "400", description = "Request body is invalid, booth is not a NIGHT booth, waiting is closed, or user has reached the maximum of 3 active waitings"),
             @ApiResponse(responseCode = "401", description = "Authentication is required"),
             @ApiResponse(responseCode = "403", description = "USER role is required"),
-            @ApiResponse(responseCode = "404", description = "Booth was not found")
+            @ApiResponse(responseCode = "404", description = "Booth was not found"),
+            @ApiResponse(responseCode = "409", description = "An active waiting already exists for this booth")
     })
     @PostMapping("/{boothId}/waitings")
     public ResponseEntity<WaitingDTO.Response> registerWaiting(
             @Parameter(description = "Booth ID") @PathVariable UUID boothId,
             @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser,
-            @RequestBody WaitingDTO.Request request
+            @Valid @RequestBody WaitingDTO.Request request
     ) {
         WaitingDTO.Response response = waitingService.registerWaiting(
                 currentUser.id(), currentUser.festivalId(), boothId, request.partySize());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Open or close booth waiting", description = "Enables or disables waiting registration for a managed NIGHT booth.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Waiting registration availability updated"),
+            @ApiResponse(responseCode = "400", description = "Request body is invalid or booth is not a NIGHT booth"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found")
+    })
+    @PatchMapping("/{boothId}/waitings/status")
+    public ResponseEntity<BoothDTO.Detail> updateWaitingOpenStatus(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @Valid @RequestBody WaitingDTO.OpenStatusRequest request
+    ) {
+        return ResponseEntity.ok(waitingService.updateWaitingOpenStatus(currentUser, boothId, request));
     }
 }

@@ -1,6 +1,8 @@
 spring:
   application:
     name: festi-backend
+  config:
+    import: optional:classpath:push-messages.yml
   datasource:
     url: ${FESTI_DATABASE_URL:jdbc:postgresql://localhost:5432/festi}
     username: ${FESTI_DATABASE_USERNAME:festi}
@@ -23,3 +25,10 @@ festi:
     access-token-expiration: ${FESTI_JWT_ACCESS_TOKEN_EXPIRATION:3600}
   cors:
     allowed-origins: ${FESTI_CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  push:
+    delivery:
+      enabled: ${FESTI_WEB_PUSH_ENABLED:false}
+      public-key: ${FESTI_VAPID_PUBLIC_KEY:}
+      private-key: ${FESTI_VAPID_PRIVATE_KEY:}
+      subject: ${FESTI_VAPID_SUBJECT:}
+      ttl-seconds: ${FESTI_WEB_PUSH_TTL_SECONDS:300}
