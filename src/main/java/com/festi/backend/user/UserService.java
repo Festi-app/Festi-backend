@@ -1,6 +1,8 @@
 package com.festi.backend.user;
 
+import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.NotFoundException;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,28 @@ public class UserService {
     public UserDTO.Response updateMe(String userId, UUID festivalId, UserDTO.UpdateRequest request) {
         User user = findUser(userId, festivalId);
         user.updateProfile(request.name(), request.phone());
+        return UserDTO.Response.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserDTO.Response> getUsersByRole(UUID festivalId, UserRole role) {
+        return userRepository.findByFestivalIdAndRole(festivalId, role).stream()
+                .map(UserDTO.Response::from)
+                .toList();
+    }
+
+    public UserDTO.Response updateUserRole(String userId, UUID festivalId, UserRole role) {
+        if (role == UserRole.USER) {
+            throw new BadRequestException("Use DELETE to reset a user's role.");
+        }
+        User user = findUser(userId, festivalId);
+        user.changeRole(role);
+        return UserDTO.Response.from(user);
+    }
+
+    public UserDTO.Response resetUserRole(String userId, UUID festivalId) {
+        User user = findUser(userId, festivalId);
+        user.changeRole(UserRole.USER);
         return UserDTO.Response.from(user);
     }
 

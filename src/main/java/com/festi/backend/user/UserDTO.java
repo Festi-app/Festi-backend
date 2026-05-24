@@ -42,4 +42,10 @@ public final class UserDTO {
             return name != null || phone != null;
         }
     }
+
+    public record RoleUpdateRequest(
+            @jakarta.validation.constraints.NotNull
+            UserRole role
+    ) {
+    }
 }

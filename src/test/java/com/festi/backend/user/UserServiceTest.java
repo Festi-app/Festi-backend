@@ -1,10 +1,13 @@
 package com.festi.backend.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.festival.Festival;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,5 +78,46 @@ class UserServiceTest {
         assertThat(response.phone()).isEqualTo("01099998888");
     }
 
+    @Test
+    void listsUsersByRole() {
+        User admin = new User(festival, "admin1", "hashed", "Admin", "01011111111");
+        admin.changeRole(UserRole.FESTIVAL_ADMIN);
+        when(userRepository.findByFestivalIdAndRole(festival.getId(), UserRole.FESTIVAL_ADMIN))
+                .thenReturn(List.of(admin));
 
+        List<UserDTO.Response> result = userService.getUsersByRole(festival.getId(), UserRole.FESTIVAL_ADMIN);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo("admin1");
+        assertThat(result.get(0).role()).isEqualTo(UserRole.FESTIVAL_ADMIN);
+    }
+
+    @Test
+    void updatesUserRole() {
+        User user = new User(festival, "manager1", "hashed", "Manager", "01022222222");
+        when(userRepository.findByIdAndFestivalId("manager1", festival.getId()))
+                .thenReturn(Optional.of(user));
+
+        UserDTO.Response response = userService.updateUserRole("manager1", festival.getId(), UserRole.FESTIVAL_ADMIN);
+
+        assertThat(response.role()).isEqualTo(UserRole.FESTIVAL_ADMIN);
+    }
+
+    @Test
+    void rejectsSettingRoleToUser() {
+        assertThatThrownBy(() -> userService.updateUserRole("manager1", festival.getId(), UserRole.USER))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void resetsUserRoleToUser() {
+        User user = new User(festival, "admin1", "hashed", "Admin", "01033333333");
+        user.changeRole(UserRole.FESTIVAL_ADMIN);
+        when(userRepository.findByIdAndFestivalId("admin1", festival.getId()))
+                .thenReturn(Optional.of(user));
+
+        UserDTO.Response response = userService.resetUserRole("admin1", festival.getId());
+
+        assertThat(response.role()).isEqualTo(UserRole.USER);
+    }
 }
