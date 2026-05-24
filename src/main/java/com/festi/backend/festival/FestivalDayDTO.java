@@ -17,6 +17,13 @@ public final class FestivalDayDTO {
         }
     }
 
+    public record Period(UUID festivalDayId, LocalDate day) {
+
+        public static Period from(FestivalDay festivalDay) {
+            return new Period(festivalDay.getId(), festivalDay.getDay());
+        }
+    }
+
     public record Request(
             @NotNull
             LocalDate day,

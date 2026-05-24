@@ -27,6 +27,13 @@ public class FestivalService {
         return FestivalDTO.Response.from(findSingleFestival());
     }
 
+    public List<FestivalDayDTO.Period> getPeriod() {
+        Festival festival = findSingleFestival();
+        return festivalDayRepository.findByFestivalIdOrderByDay(festival.getId()).stream()
+                .map(FestivalDayDTO.Period::from)
+                .toList();
+    }
+
     public List<NoticeDTO.Response> getNotices() {
         Festival festival = findSingleFestival();
         return noticeRepository.findByFestivalIdOrderByPinnedDescCreatedAtDesc(festival.getId()).stream()

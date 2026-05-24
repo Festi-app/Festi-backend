@@ -62,6 +62,7 @@ public class SecurityConfig {
                                 "/api/booths/*/menus",
                                 "/api/locations",
                                 "/api/festival",
+                                "/api/festival/period",
                                 "/api/festival/notices",
                                 "/api/festival/timelines"
                         ).authenticated()
