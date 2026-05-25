@@ -11,6 +11,7 @@ public enum ErrorCode {
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Access is denied."),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Requested resource was not found."),
     CONFLICT(HttpStatus.CONFLICT, "Request conflicts with the current resource state."),
+    PAYLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "Uploaded file exceeds the maximum size."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error.");
 
     private final HttpStatus status;

@@ -5,6 +5,10 @@ import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.NotFoundException;
+import com.festi.backend.image.ImageFileTransactionManager;
+import com.festi.backend.image.ImageStorage;
+import com.festi.backend.image.ImageStorage.ImageDirectory;
+import com.festi.backend.image.ImageStorage.StoredImage;
 import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
 import java.util.List;
@@ -12,6 +16,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional(readOnly = true)
@@ -21,6 +26,8 @@ public class MenuService {
     private final BoothRepository boothRepository;
     private final MenuItemRepository menuItemRepository;
     private final BoothAuthorizationService boothAuthorizationService;
+    private final ImageStorage imageStorage;
+    private final ImageFileTransactionManager imageFileTransactionManager;
 
     public List<MenuDTO.Response> getMenus(UUID boothId) {
         boothRepository.findById(boothId)
@@ -39,7 +46,7 @@ public class MenuService {
         assertMenuManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.save(
                 new MenuItem(booth, request.name(), request.price(),
-                        request.description(), request.imageUrl(), request.sortOrder()));
+                        request.description(), request.sortOrder()));
         return MenuDTO.Response.from(menuItem);
     }
 
@@ -52,8 +59,7 @@ public class MenuService {
         assertMenuManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
-        menuItem.update(request.name(), request.price(), request.description(),
-                request.imageUrl(), request.sortOrder());
+        menuItem.update(request.name(), request.price(), request.description(), request.sortOrder());
         return MenuDTO.Response.from(menuItem);
     }
 
@@ -65,6 +71,7 @@ public class MenuService {
         MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
         menuItemRepository.delete(menuItem);
+        imageFileTransactionManager.deleteAfterCommit(menuItem.getImageUrl());
     }
 
     @Transactional
@@ -76,6 +83,35 @@ public class MenuService {
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
         menuItem.markSoldOut();
         return MenuDTO.Response.from(menuItem);
+    }
+
+    @Transactional
+    public MenuDTO.Response updateImage(AuthenticatedUser currentUser, UUID boothId, UUID menuId,
+                                        MultipartFile image) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        boothAuthorizationService.assertCanManageBooth(currentUser, booth);
+        assertMenuManageableBooth(booth);
+        MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
+                .orElseThrow(() -> new NotFoundException("Menu not found."));
+        String previousUrl = menuItem.getImageUrl();
+        StoredImage storedImage = imageStorage.store(image, ImageDirectory.MENUS);
+        imageFileTransactionManager.replaceAfterTransaction(previousUrl, storedImage.publicUrl());
+        menuItem.updateImage(storedImage.publicUrl());
+        return MenuDTO.Response.from(menuItem);
+    }
+
+    @Transactional
+    public void removeImage(AuthenticatedUser currentUser, UUID boothId, UUID menuId) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        boothAuthorizationService.assertCanManageBooth(currentUser, booth);
+        assertMenuManageableBooth(booth);
+        MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
+                .orElseThrow(() -> new NotFoundException("Menu not found."));
+        String previousUrl = menuItem.getImageUrl();
+        menuItem.removeImage();
+        imageFileTransactionManager.deleteAfterCommit(previousUrl);
     }
 
     private void assertMenuManageableBooth(Booth booth) {

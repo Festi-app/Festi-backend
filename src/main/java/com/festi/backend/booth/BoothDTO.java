@@ -51,8 +51,7 @@ public final class BoothDTO {
             @NotBlank @Size(max = 100) String name,
             BoothCategory category,
             String description,
-            @Size(max = 100) String operatingHours,
-            @Size(max = 500) String imageUrl
+            @Size(max = 100) String operatingHours
     ) {
     }
 
@@ -60,8 +59,7 @@ public final class BoothDTO {
             @Size(max = 100) String name,
             BoothCategory category,
             String description,
-            @Size(max = 100) String operatingHours,
-            @Size(max = 500) String imageUrl
+            @Size(max = 100) String operatingHours
     ) {
     }
 
@@ -69,8 +67,7 @@ public final class BoothDTO {
             @NotBlank @Size(max = 100) String name,
             @NotNull BoothCategory category,
             String description,
-            @Size(max = 100) String operatingHours,
-            @Size(max = 500) String imageUrl
+            @Size(max = 100) String operatingHours
     ) {
     }
 

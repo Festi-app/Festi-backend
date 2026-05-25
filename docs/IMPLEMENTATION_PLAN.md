@@ -71,7 +71,7 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - `id`, `festival`, `userId`, `booth`, `createdAt`
   - unique 기준은 `festival_id + user_id + booth_id`
 - `BoothApplication`
-  - `id`, `festival`, `applicantId`, `boothName`, `boothType`, `boothCategory`, `imageUrl`, `description`, `status`, `reviewMemo`, `createdAt`, `updatedAt`
+  - `id`, `festival`, `applicantId`, nullable `booth`, `boothName`, `boothType`, `boothCategory`, `description`, `status`, `reviewMemo`, `createdAt`, `updatedAt`
 - `Festival`
   - `id`, `name`, `startDate`, `endDate`, `description`, `createdAt`, `updatedAt`
 - `FestivalDay`
@@ -316,6 +316,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 - 회원가입/로그인은 `permitAll`
 - `POST /api/booth-applications`는 `permitAll`이며 신청 생성 controller/service가 구현되어 있다.
+- `GET /media/images/**`는 업로드된 축제 콘텐츠 조회를 위해 `permitAll`이다.
 - 모든 인증 사용자 조회 API와 본인 정보 API는 `authenticated`
 - 일반 사용자 전용 API는 `ROLE_USER`
 - 축제 관리자 API는 `ROLE_FESTIVAL_ADMIN`
@@ -491,6 +492,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 승인된 신청은 삭제할 수 없고 `409 Conflict`를 반환한다.
 - 승인 시 실제 `Booth`를 생성한다.
 - 승인된 신청의 manager 계정은 생성된 `Booth.manager`가 된다.
+- 신청 DTO와 엔티티는 이미지를 보관하지 않으며, 승인된 부스 이미지는 별도 업로드 API에서만 생성한다.
 - 승인/거절은 `PENDING` 상태에서만 가능하며, 이미 심사된 신청은 `409 Conflict`를 반환한다.
 - 거절 메모는 선택 입력이고 blank 값은 `null`로 정규화한다.
 - 거절된 신청은 승인 전 신청과 동일하게 삭제 가능 대상으로 본다.
@@ -533,17 +535,78 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 ### Implemented APIs
 
 - `PATCH /api/booths/{boothId}`
+- `PUT /api/booths/{boothId}/image`
+- `DELETE /api/booths/{boothId}/image`
 - `POST /api/booths/{boothId}/menus`
 - `PATCH /api/booths/{boothId}/menus/{menuId}`
 - `DELETE /api/booths/{boothId}/menus/{menuId}`
+- `PUT /api/booths/{boothId}/menus/{menuId}/image`
+- `DELETE /api/booths/{boothId}/menus/{menuId}/image`
 - `POST /api/booths/{boothId}/menus/{menuId}/sold-out`
 
 ### Implemented Validation Rules
 
 - `BOOTH_MANAGER`는 본인 담당 부스만 수정할 수 있다.
 - `FESTIVAL_ADMIN`은 부스 관리자 API를 우회 통과할 수 있다.
-- 메뉴 생성/수정은 `NIGHT` 부스에서만 허용한다.
+- 메뉴 생성/수정은 `NIGHT` 또는 `FOOD_TRUCK` 부스에서만 허용한다.
 - 메뉴 삭제/품절 처리는 담당 부스 권한을 검증한 뒤 수행한다.
+- 부스/푸드트럭/메뉴 일반 정보 요청은 `imageUrl`을 받지 않으며 이미지는 전용 multipart API로만 교체 또는 제거한다.
+- 이미지 업로드는 JPEG/PNG만 허용하며, 기본 제한 `5MB`, `4096x4096`은 `festi.images` 설정으로 조정할 수 있다.
+- 로컬 이미지 URL은 `/media/images/**`로 공개하고, 교체/삭제 시 commit 이후 기존 관리 파일만 지운다. 신규 파일은 transaction rollback 시 정리한다.
+
+### Image Upload And Removal
+
+부스 신청 단계에는 이미지가 없으며, 신청 승인 후 생성된 `Booth`와 해당 부스의 `MenuItem`만 이미지 교체/제거 대상이다. 따라서 `BoothApplicationDTO.CreateRequest`, `BoothApplicationDTO.Response`, `BoothApplication`, `BoothDTO`의 생성/수정 request, `MenuDTO.Request`에서는 `imageUrl`을 사용하지 않는다. 조회 response의 `BoothDTO.Summary.imageUrl`, `BoothDTO.Detail.imageUrl`, `MenuDTO.Response.imageUrl`은 유지한다.
+
+#### Endpoints
+
+| Method | Endpoint | Request | Response | Access |
+| --- | --- | --- | --- | --- |
+| `PUT` | `/api/booths/{boothId}/image` | `multipart/form-data`, part `image` | `200 BoothDTO.Detail` | 소유 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| `DELETE` | `/api/booths/{boothId}/image` | 없음 | `204` | 소유 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| `PUT` | `/api/booths/{boothId}/menus/{menuId}/image` | `multipart/form-data`, part `image` | `200 MenuDTO.Response` | 소유 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| `DELETE` | `/api/booths/{boothId}/menus/{menuId}/image` | 없음 | `204` | 소유 `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| `GET` | `/media/images/**` | 없음 | 이미지 binary | 모두 |
+
+#### Storage And Error Contract
+
+- `ImageStorageProperties`는 기본 저장 root `./uploads/images`, 공개 prefix `/media/images`, 파일 크기 제한 `5MB`, 폭/높이 제한 `4096x4096`을 바인딩한다. 운영에서는 `FESTI_IMAGE_STORAGE_ROOT`, `FESTI_IMAGE_MAX_FILE_SIZE`, `FESTI_IMAGE_MAX_WIDTH`, `FESTI_IMAGE_MAX_HEIGHT`로 주입할 수 있다.
+- `LocalImageStorage`는 원본 파일명을 저장 경로에 사용하지 않고 UUID를 사용한다. 부스 파일은 `/media/images/booths/{uuid}.jpg|png`, 메뉴 파일은 `/media/images/menus/{uuid}.jpg|png` URL로 반환한다.
+- 빈 파일, 누락된 `image` part, JPEG/PNG가 아닌 파일, 실제 디코딩할 수 없는 파일, 설정된 폭 또는 높이 제한을 초과한 파일은 `400 INVALID_INPUT_VALUE`로 거부한다.
+- 설정된 파일 크기 제한을 초과한 파일 또는 multipart parser에서 제한을 초과한 요청은 `413 PAYLOAD_TOO_LARGE`로 반환한다.
+- Spring MVC resource handler가 storage root를 `/media/images/**`에 매핑하고, `SecurityConfig`는 이 공개 이미지 조회를 인증 없이 허용한다.
+
+#### Transaction And Deletion Rules
+
+- `BoothService`와 `MenuService`는 리소스 조회, 권한 확인, 새 이미지 저장, 엔티티 URL 변경, 응답 DTO 생성을 담당한다.
+- 이미지 교체 중 DB transaction이 rollback되면 새로 저장된 파일을 삭제한다. commit되면 이전 이미지 중 `/media/images/` prefix로 관리되는 로컬 파일만 삭제한다.
+- 이미지 제거는 `imageUrl = null` 변경을 먼저 commit한 뒤 이전 관리 파일을 삭제하며, 이미지가 이미 없는 경우에도 `204`를 반환한다.
+- 기존 데이터에 남아 있는 외부 URL은 물리 파일 삭제 대상으로 보지 않는다.
+- 기존 메뉴 삭제와 푸드트럭 삭제도 commit 이후 로컬 이미지 파일을 정리한다. 푸드트럭 삭제 시 연결된 메뉴의 관리 이미지도 함께 정리한다.
+
+#### Controller Upload Flow
+
+```mermaid
+flowchart TD
+    A["Frontend: PUT /api/booths/{boothId}/image<br/>multipart part: image"] --> B["SecurityFilterChain<br/>JWT 및 role 검사"]
+    B -->|실패| X["401 또는 403"]
+    B -->|통과| C["BoothController<br/>MultipartFile 수신 후 Service 호출"]
+    C --> D["BoothService<br/>Booth 조회"]
+    D -->|없음| Y["404 RESOURCE_NOT_FOUND"]
+    D --> E["BoothAuthorizationService<br/>부스 소유권 검사"]
+    E -->|실패| X
+    E --> F["LocalImageStorage<br/>empty, configured size/dimension, JPEG/PNG, decode 검증"]
+    F -->|invalid| Z["400 INVALID_INPUT_VALUE"]
+    F -->|too large| W["413 PAYLOAD_TOO_LARGE"]
+    F --> G["UUID 파일명으로 신규 파일 저장<br/>/media/images/booths/..."]
+    G --> H["Booth.updateImage(publicUrl)"]
+    H --> I["DB transaction 완료"]
+    I -->|commit| J["기존 관리 이미지 파일 삭제"]
+    I -->|rollback| K["신규 저장 파일 삭제"]
+    J --> L["200 BoothDTO.Detail<br/>imageUrl 포함"]
+```
+
+메뉴 이미지 업로드는 `MenuController -> MenuService -> MenuItem.updateImage(...)` 순서로 동일하게 처리한다. `DELETE` 제거 요청은 파일 검증과 신규 저장 단계를 생략하고, 엔티티의 `imageUrl`을 `null`로 commit한 뒤 이전 관리 파일을 삭제한다.
 
 ### Follow-Up Hardening
 
@@ -643,6 +706,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 표시 문자열과 아이콘 경로는 `src/main/resources/push-messages.yml`의 `title`, `body`, `icon`만 변경해 수정할 수 있다. 클릭 경로 `url`은 설정 필드가 아니라 코드 계약이다.
 - 실제 Web Push 전송을 활성화하려면 `FESTI_WEB_PUSH_ENABLED=true`와 `FESTI_VAPID_PUBLIC_KEY`, `FESTI_VAPID_PRIVATE_KEY`, `FESTI_VAPID_SUBJECT`가 필요하다. TTL은 `FESTI_WEB_PUSH_TTL_SECONDS`로 설정한다.
 - outbox worker는 기본 활성화되며 `FESTI_WEB_PUSH_WORKER_ENABLED`, `FESTI_WEB_PUSH_POLL_DELAY_MILLIS`, `FESTI_WEB_PUSH_BATCH_SIZE`, `FESTI_WEB_PUSH_MAX_ATTEMPTS`, `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS`, `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS`로 실행과 재처리 정책을 조정한다.
+- 업로드 이미지는 기본 `./uploads/images`, 운영에서는 `FESTI_IMAGE_STORAGE_ROOT`로 지정한 영구 디렉터리에 저장한다. 기존 외부 URL은 읽기 값으로 유지되며 `/media/images/` URL만 물리 삭제한다.
 
 ## Priority 13: Test Coverage
 
@@ -672,6 +736,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `BoothAuthorizationServiceTest`
 - `BoothServiceTest`
 - `MenuServiceTest`
+- `LocalImageStorageTest`
+- `ImageFileTransactionManagerTest`
 - `LocationServiceTest`
 - `FestivalServiceTest`
 - `WaitingServiceTest`
@@ -764,6 +830,7 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `POST /api/auth/signup` - Implemented
 - `POST /api/auth/login` - Implemented
 - `POST /api/booth-applications` - Implemented
+- `GET /media/images/**` - Implemented
 
 ### All Authenticated Users
 
@@ -793,9 +860,13 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 
 - `GET /api/booth-applications/me` - Implemented
 - `PATCH /api/booths/{boothId}` - Implemented
+- `PUT /api/booths/{boothId}/image` - Implemented
+- `DELETE /api/booths/{boothId}/image` - Implemented
 - `POST /api/booths/{boothId}/menus` - Implemented
 - `PATCH /api/booths/{boothId}/menus/{menuId}` - Implemented
 - `DELETE /api/booths/{boothId}/menus/{menuId}` - Implemented
+- `PUT /api/booths/{boothId}/menus/{menuId}/image` - Implemented
+- `DELETE /api/booths/{boothId}/menus/{menuId}/image` - Implemented
 - `POST /api/booths/{boothId}/menus/{menuId}/sold-out` - Implemented
 - `GET /api/booths/{boothId}/waitings` - Implemented
 - `POST /api/waitings/{waitingId}/call` - Implemented
@@ -834,5 +905,5 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `BOOTH_MANAGER`는 전역 role로 유지한다.
 - 부스 관리자 계정은 일반 사용자 계정과 재사용하지 않는다.
 - `FOOD_TRUCK`은 내부적으로 `Booth`로 표현한다. 축제 관리자 계정을 manager로 배정해야 한다는 정책과 달리 현재 신청 승인 구현은 신청자의 `BOOTH_MANAGER` 계정을 배정하므로 후속 보정이 필요하다.
-- 이미지 업로드 저장소 연동은 v1 도메인/API 구현 이후 별도 계획으로 분리한다.
+- 승인 이후 부스/메뉴 이미지는 로컬 저장소 기반 전용 업로드/삭제 API로 관리하며 신청에는 포함하지 않는다.
 - `docs/API-ENDPOINTS.md`는 현재 구현 상태와 PATCH 이후 권한 구분에 맞춰 갱신되어 있다.

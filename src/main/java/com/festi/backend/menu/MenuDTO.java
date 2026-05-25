@@ -15,7 +15,6 @@ public final class MenuDTO {
             @NotBlank @Size(max = 100) String name,
             @NotNull @Min(0) Integer price,
             String description,
-            @Size(max = 500) String imageUrl,
             short sortOrder
     ) {
     }

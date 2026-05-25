@@ -42,9 +42,6 @@ public final class BoothApplicationDTO {
 
             BoothCategory boothCategory,
 
-            @Size(max = 500)
-            String imageUrl,
-
             String description
     ) {
     }
@@ -62,7 +59,6 @@ public final class BoothApplicationDTO {
             String boothName,
             BoothType boothType,
             BoothCategory boothCategory,
-            String imageUrl,
             String description,
             BoothApplicationStatus status,
             String reviewMemo,
@@ -78,7 +74,6 @@ public final class BoothApplicationDTO {
                     application.getBoothName(),
                     application.getBoothType(),
                     application.getBoothCategory(),
-                    application.getImageUrl(),
                     application.getDescription(),
                     application.getStatus(),
                     application.getReviewMemo(),

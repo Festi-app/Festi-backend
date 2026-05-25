@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -25,12 +27,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -123,6 +127,44 @@ class BoothManagerControllerIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ── PUT/DELETE /api/booths/{boothId}/image ──────────────────────────────
+
+    @Test
+    void boothManagerCanReplaceAndRemoveBoothImage() throws Exception {
+        MockMultipartFile image = new MockMultipartFile("image", "booth.png", "image/png", new byte[]{1});
+        when(boothService.updateImage(any(), eq(boothId), any())).thenReturn(boothDetail);
+
+        mockMvc.perform(multipart(HttpMethod.PUT, "/api/booths/{boothId}/image", boothId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageUrl").value("image.jpg"));
+
+        mockMvc.perform(delete("/api/booths/{boothId}/image", boothId)
+                        .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER)))
+                .andExpect(status().isNoContent());
+
+        verify(boothService).removeImage(any(), eq(boothId));
+    }
+
+    @Test
+    void userCannotReplaceBoothImage() throws Exception {
+        MockMultipartFile image = new MockMultipartFile("image", "booth.png", "image/png", new byte[]{1});
+
+        mockMvc.perform(multipart(HttpMethod.PUT, "/api/booths/{boothId}/image", boothId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + token(UserRole.USER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void openApiContainsDedicatedImageMutationPaths() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/booths/{boothId}/image']").exists())
+                .andExpect(jsonPath("$.paths['/api/booths/{boothId}/menus/{menuId}/image']").exists());
+    }
+
     // ── POST /api/booths/{boothId}/menus ─────────────────────────────────────
 
     @Test
@@ -206,6 +248,26 @@ class BoothManagerControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ── PUT/DELETE /api/booths/{boothId}/menus/{menuId}/image ───────────────
+
+    @Test
+    void festivalAdminCanReplaceAndRemoveMenuImage() throws Exception {
+        MockMultipartFile image = new MockMultipartFile("image", "menu.jpg", "image/jpeg", new byte[]{1});
+        when(menuService.updateImage(any(), eq(boothId), eq(menuId), any())).thenReturn(menuResponse);
+
+        mockMvc.perform(multipart(HttpMethod.PUT, "/api/booths/{boothId}/menus/{menuId}/image", boothId, menuId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageUrl").value("image.jpg"));
+
+        mockMvc.perform(delete("/api/booths/{boothId}/menus/{menuId}/image", boothId, menuId)
+                        .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN)))
+                .andExpect(status().isNoContent());
+
+        verify(menuService).removeImage(any(), eq(boothId), eq(menuId));
+    }
+
     // ── POST /api/booths/{boothId}/menus/{menuId}/sold-out ───────────────────
 
     @Test
@@ -238,7 +300,7 @@ class BoothManagerControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token(UserRole.FESTIVAL_ADMIN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new BoothDTO.CreateFoodTruckRequest("푸드트럭A", null, "설명", "11:00~20:00", null))))
+                                new BoothDTO.CreateFoodTruckRequest("푸드트럭A", null, "설명", "11:00~20:00"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.type").value("FOOD_TRUCK"));
     }
@@ -249,7 +311,7 @@ class BoothManagerControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token(UserRole.BOOTH_MANAGER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new BoothDTO.CreateFoodTruckRequest("푸드트럭B", null, null, null, null))))
+                                new BoothDTO.CreateFoodTruckRequest("푸드트럭B", null, null, null))))
                 .andExpect(status().isForbidden());
     }
 
@@ -259,18 +321,18 @@ class BoothManagerControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token(UserRole.USER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new BoothDTO.CreateFoodTruckRequest("푸드트럭C", null, null, null, null))))
+                                new BoothDTO.CreateFoodTruckRequest("푸드트럭C", null, null, null))))
                 .andExpect(status().isForbidden());
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private BoothDTO.UpdateRequest updateBoothRequest() {
-        return new BoothDTO.UpdateRequest("부스명", BoothCategory.ALCOHOL, "설명", "18:00~23:00", "image.jpg");
+        return new BoothDTO.UpdateRequest("부스명", BoothCategory.ALCOHOL, "설명", "18:00~23:00");
     }
 
     private MenuDTO.Request menuRequest() {
-        return new MenuDTO.Request("메뉴명", 5000, "설명", "image.jpg", (short) 1);
+        return new MenuDTO.Request("메뉴명", 5000, "설명", (short) 1);
     }
 
     private String token(UserRole role) {

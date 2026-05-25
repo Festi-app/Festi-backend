@@ -173,7 +173,6 @@ type BoothApplicationResponse = {
   boothName: string;
   boothType: BoothType;
   boothCategory: BoothCategory;
-  imageUrl: string | null;
   description: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewMemo: string | null;
@@ -231,6 +230,20 @@ type FestivalDayResponse = {
 - Auth: any authenticated user
 - Response: `BoothDetail`
 
+`PUT /api/booths/{boothId}/image`
+
+- Auth: `BOOTH_MANAGER` for an owned booth, or `FESTIVAL_ADMIN`
+- Request: `multipart/form-data` with file part `image`
+- Accepts JPEG/PNG only. Default server limits are `5MB` and `4096x4096`, and may be configured by deployment.
+- Response: `BoothDetail` with `imageUrl` such as `/media/images/booths/{uuid}.png`.
+
+`DELETE /api/booths/{boothId}/image`
+
+- Auth: `BOOTH_MANAGER` for an owned booth, or `FESTIVAL_ADMIN`
+- Response: `204 No Content`; deleting when no image is set is allowed.
+
+Food truck create and general update requests under `/api/booths/admin/food-trucks` also do not accept `imageUrl`. A festival admin uploads their images through the same `/api/booths/{boothId}/image` API after creation.
+
 ### Booth Applications
 
 `POST /api/booth-applications`
@@ -249,12 +262,12 @@ type FestivalDayResponse = {
   "boothName": "Night Booth",
   "boothType": "NIGHT",
   "boothCategory": "ALCOHOL",
-  "imageUrl": "https://example.com/booth.png",
   "description": "Booth description"
 }
 ```
 
-- `boothCategory`, `imageUrl`, and `description` are optional. Omitted `boothCategory` defaults to `ACTIVITY`.
+- `boothCategory` and `description` are optional. Omitted `boothCategory` defaults to `ACTIVITY`.
+- An application does not accept an image. Upload images only after approval using the booth image API.
 - Response: `BoothApplicationResponse`
 - A newly created `PENDING` application has `boothId: null`.
 
@@ -318,6 +331,20 @@ type MenuResponse = {
   sortOrder: number;
 };
 ```
+
+`PUT /api/booths/{boothId}/menus/{menuId}/image`
+
+- Auth: `BOOTH_MANAGER` for an owned booth, or `FESTIVAL_ADMIN`
+- Request: `multipart/form-data` with file part `image`
+- Accepts JPEG/PNG only. Default server limits are `5MB` and `4096x4096`, and may be configured by deployment.
+- Response: `MenuResponse` with `imageUrl` such as `/media/images/menus/{uuid}.jpg`.
+
+`DELETE /api/booths/{boothId}/menus/{menuId}/image`
+
+- Auth: `BOOTH_MANAGER` for an owned booth, or `FESTIVAL_ADMIN`
+- Response: `204 No Content`; deleting when no image is set is allowed.
+
+Image binaries are publicly readable through `GET /media/images/**`. Booth and menu JSON create/update requests do not accept `imageUrl`.
 
 ### Locations
 

@@ -6,8 +6,13 @@ import com.festi.backend.festival.Festival;
 import com.festi.backend.festival.FestivalDay;
 import com.festi.backend.festival.FestivalDayRepository;
 import com.festi.backend.festival.FestivalRepository;
+import com.festi.backend.image.ImageFileTransactionManager;
+import com.festi.backend.image.ImageStorage;
+import com.festi.backend.image.ImageStorage.ImageDirectory;
+import com.festi.backend.image.ImageStorage.StoredImage;
 import com.festi.backend.location.BoothLocation;
 import com.festi.backend.location.BoothLocationRepository;
+import com.festi.backend.menu.MenuItemRepository;
 import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
 import com.festi.backend.waiting.WaitingRepository;
@@ -20,6 +25,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,6 +37,9 @@ public class BoothService {
     private final FestivalRepository festivalRepository;
     private final FestivalDayRepository festivalDayRepository;
     private final BoothAuthorizationService boothAuthorizationService;
+    private final MenuItemRepository menuItemRepository;
+    private final ImageStorage imageStorage;
+    private final ImageFileTransactionManager imageFileTransactionManager;
     private final WaitingRepository waitingRepository;
 
     public List<BoothDTO.Summary> getBooths(LocalDate day, BoothType type, BoothCategory category) {
@@ -52,7 +61,7 @@ public class BoothService {
     public BoothDTO.Detail createFoodTruck(BoothDTO.CreateFoodTruckRequest request) {
         BoothCategory category = request.category() != null ? request.category() : BoothCategory.ACTIVITY;
         Booth booth = new Booth(request.name(), category, BoothType.FOOD_TRUCK);
-        booth.update(request.name(), category, request.description(), request.operatingHours(), request.imageUrl());
+        booth.update(request.name(), category, request.description(), request.operatingHours());
         return BoothDTO.Detail.from(boothRepository.save(booth));
     }
 
@@ -63,8 +72,7 @@ public class BoothService {
         if (booth.getType() != BoothType.FOOD_TRUCK) {
             throw new BadRequestException("Booth is not a food truck.");
         }
-        booth.updatePartial(request.name(), request.category(), request.description(),
-                request.operatingHours(), request.imageUrl());
+        booth.updatePartial(request.name(), request.category(), request.description(), request.operatingHours());
         return BoothDTO.Detail.from(booth);
     }
 
@@ -75,6 +83,9 @@ public class BoothService {
         if (booth.getType() != BoothType.FOOD_TRUCK) {
             throw new BadRequestException("Booth is not a food truck.");
         }
+        menuItemRepository.findByBoothIdOrderBySortOrder(boothId).forEach(
+                menuItem -> imageFileTransactionManager.deleteAfterCommit(menuItem.getImageUrl()));
+        imageFileTransactionManager.deleteAfterCommit(booth.getImageUrl());
         boothRepository.delete(booth);
     }
 
@@ -84,9 +95,30 @@ public class BoothService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        booth.update(request.name(), request.category(), request.description(),
-                request.operatingHours(), request.imageUrl());
+        booth.update(request.name(), request.category(), request.description(), request.operatingHours());
         return BoothDTO.Detail.from(booth);
+    }
+
+    @Transactional
+    public BoothDTO.Detail updateImage(AuthenticatedUser currentUser, UUID boothId, MultipartFile image) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        boothAuthorizationService.assertCanManageBooth(currentUser, booth);
+        String previousUrl = booth.getImageUrl();
+        StoredImage storedImage = imageStorage.store(image, ImageDirectory.BOOTHS);
+        imageFileTransactionManager.replaceAfterTransaction(previousUrl, storedImage.publicUrl());
+        booth.updateImage(storedImage.publicUrl());
+        return BoothDTO.Detail.from(booth);
+    }
+
+    @Transactional
+    public void removeImage(AuthenticatedUser currentUser, UUID boothId) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new NotFoundException("Booth not found."));
+        boothAuthorizationService.assertCanManageBooth(currentUser, booth);
+        String previousUrl = booth.getImageUrl();
+        booth.removeImage();
+        imageFileTransactionManager.deleteAfterCommit(previousUrl);
     }
 
     private List<BoothDTO.Summary> getPlacedBooths(LocalDate day, BoothType type, BoothCategory category) {

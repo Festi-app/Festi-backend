@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,10 +26,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/booths")
@@ -153,6 +157,40 @@ public class BoothController {
             @Valid @RequestBody BoothDTO.UpdateRequest request
     ) {
         return ResponseEntity.ok(boothService.updateBooth(currentUser, boothId, request));
+    }
+
+    @Operation(summary = "Upload booth image", description = "Replaces the managed image for a booth with a JPEG or PNG file within the configured upload limits.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Booth image updated"),
+            @ApiResponse(responseCode = "400", description = "Image file is missing or invalid"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found"),
+            @ApiResponse(responseCode = "413", description = "Image file exceeds the configured size limit")
+    })
+    @PutMapping(value = "/{boothId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BoothDTO.Detail> updateImage(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
+        return ResponseEntity.ok(boothService.updateImage(currentUser, boothId, image));
+    }
+
+    @Operation(summary = "Remove booth image", description = "Removes the managed booth image. The operation is idempotent when no image is set.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Booth image removed"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth was not found")
+    })
+    @DeleteMapping("/{boothId}/image")
+    public ResponseEntity<Void> removeImage(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        boothService.removeImage(currentUser, boothId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Register waiting", description = "Registers the authenticated user for a waiting slot at the specified booth.")

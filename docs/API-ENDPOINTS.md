@@ -18,6 +18,7 @@
 | GET | `/swagger-ui/**` | Swagger UI 정적 리소스 | 모두 |
 | GET | `/v3/api-docs` | OpenAPI JSON | 모두 |
 | GET | `/v3/api-docs/**` | OpenAPI 문서 리소스 | 모두 |
+| GET | `/media/images/**` | 업로드된 부스/메뉴 이미지 binary 조회 | 모두 |
 
 ## user / auth
 
@@ -40,7 +41,7 @@
 | POST | `/api/admin/booth-applications/{applicationId}/reject` | 신청 거절. 선택 필드 `reviewMemo`를 받을 수 있다. | `FESTIVAL_ADMIN` |
 | DELETE | `/api/admin/booth-applications/{applicationId}` | 승인 전 또는 거절된 신청과 생성된 부스 관리자 계정을 삭제한다. | `FESTIVAL_ADMIN` |
 
-`BoothApplication` 응답의 `boothId`는 `PENDING` 또는 `REJECTED` 상태에서는 `null`이며, `APPROVED` 상태에서는 승인 과정에서 생성된 부스 ID이다.
+`BoothApplication`은 이미지를 보관하지 않는다. 응답의 `boothId`는 `PENDING` 또는 `REJECTED` 상태에서는 `null`이며, `APPROVED` 상태에서는 승인 과정에서 생성된 부스 ID이다.
 
 ## booths
 
@@ -48,6 +49,12 @@
 | --- | --- | --- | --- |
 | GET | `/api/booths` | 부스 목록 조회. 선택 query: `day`, `type`, `category` | 인증 사용자 |
 | GET | `/api/booths/{boothId}` | 부스 상세 정보 조회 | 인증 사용자 |
+| PATCH | `/api/booths/{boothId}` | 부스 일반 정보 수정. 이미지 변경은 받지 않는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PUT | `/api/booths/{boothId}/image` | `multipart/form-data` part `image`로 부스 이미지 업로드/교체 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| DELETE | `/api/booths/{boothId}/image` | 부스 이미지 제거. 이미지가 없어도 `204` | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| POST | `/api/booths/admin/food-trucks` | 푸드트럭 생성. 이미지 변경은 받지 않는다. | `FESTIVAL_ADMIN` |
+| PATCH | `/api/booths/admin/food-trucks/{boothId}` | 푸드트럭 일반 정보 수정. 이미지 변경은 받지 않는다. | `FESTIVAL_ADMIN` |
+| DELETE | `/api/booths/admin/food-trucks/{boothId}` | 푸드트럭과 연결된 로컬 이미지 정리 후 삭제 | `FESTIVAL_ADMIN` |
 | POST | `/api/booths/{boothId}/waitings` | 특정 부스에 웨이팅 등록 | `USER` |
 | GET | `/api/booths/{boothId}/waitings` | 담당 부스의 active 웨이팅 목록 조회 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 | PATCH | `/api/booths/{boothId}/waitings/status` | 야간 부스의 웨이팅 접수 오픈/마감. `open`을 받는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
@@ -57,6 +64,14 @@
 | method | endpoint | 설명 | 권한 |
 | --- | --- | --- | --- |
 | GET | `/api/booths/{boothId}/menus` | 특정 부스의 메뉴 목록 조회 | 인증 사용자 |
+| POST | `/api/booths/{boothId}/menus` | 메뉴 생성. 이미지 변경은 받지 않는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PATCH | `/api/booths/{boothId}/menus/{menuId}` | 메뉴 일반 정보 수정. 이미지 변경은 받지 않는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| DELETE | `/api/booths/{boothId}/menus/{menuId}` | 메뉴 삭제 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PUT | `/api/booths/{boothId}/menus/{menuId}/image` | `multipart/form-data` part `image`로 메뉴 이미지 업로드/교체 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| DELETE | `/api/booths/{boothId}/menus/{menuId}/image` | 메뉴 이미지 제거. 이미지가 없어도 `204` | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| POST | `/api/booths/{boothId}/menus/{menuId}/sold-out` | 메뉴 품절 처리 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+
+이미지 업로드는 JPEG/PNG만 허용한다. 기본 제한은 `5MB`, `4096x4096`이며 서버 설정으로 조정할 수 있다. 저장된 이미지 URL은 `/media/images/booths/...` 또는 `/media/images/menus/...` 형식으로 응답된다. `BOOTH_MANAGER`는 본인 담당 부스만 변경할 수 있다.
 
 ## 부스 위치 / 배치도
 

@@ -1,5 +1,6 @@
 package com.festi.backend.security;
 
+import com.festi.backend.image.ImageStorageProperties;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Arrays;
@@ -33,6 +34,7 @@ public class SecurityConfig {
 
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
+    private final ImageStorageProperties imageStorageProperties;
 
     @Bean
     SecurityFilterChain securityFilterChain(
@@ -53,6 +55,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/booth-applications").permitAll()
+                        .requestMatchers(HttpMethod.GET, imageStorageProperties.publicPath() + "/**").permitAll()
 
                         // All Authenticated Users
                         .requestMatchers(
@@ -84,11 +87,19 @@ public class SecurityConfig {
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/booths/*")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/booths/*/image")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/booths/*/image")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/booths/*/menus")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/booths/*/menus/*")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/booths/*/menus/*")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/booths/*/menus/*/image")
+                        .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/booths/*/menus/*/image")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/booths/*/menus/*/sold-out")
                         .hasAnyRole("BOOTH_MANAGER", "FESTIVAL_ADMIN")
@@ -181,6 +192,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList(
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
+                HttpMethod.PUT.name(),
                 HttpMethod.PATCH.name(),
                 HttpMethod.DELETE.name(),
                 HttpMethod.OPTIONS.name()
