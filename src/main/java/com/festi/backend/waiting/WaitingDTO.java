@@ -29,8 +29,8 @@ public final class WaitingDTO {
             OffsetDateTime registeredAt,
             Integer position,
             Integer currentCallPosition,
-            String userName,
-            String userPhone
+            String name,
+            String phone
     ) {
         public static Response from(Waiting waiting) {
             return new Response(
