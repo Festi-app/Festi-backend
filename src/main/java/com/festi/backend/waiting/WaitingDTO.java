@@ -27,7 +27,8 @@ public final class WaitingDTO {
             WaitingStatus status,
             short callCount,
             OffsetDateTime registeredAt,
-            Integer position
+            Integer position,
+            Integer currentCallPosition
     ) {
         public static Response from(Waiting waiting) {
             return new Response(
@@ -37,11 +38,12 @@ public final class WaitingDTO {
                     waiting.getStatus(),
                     waiting.getCallCount(),
                     waiting.getRegisteredAt(),
+                    null,
                     null
             );
         }
 
-        public static Response from(Waiting waiting, Integer position) {
+        public static Response from(Waiting waiting, Integer position, Integer currentCallPosition) {
             return new Response(
                     waiting.getId(),
                     BoothDTO.Summary.from(waiting.getBooth()),
@@ -49,7 +51,8 @@ public final class WaitingDTO {
                     waiting.getStatus(),
                     waiting.getCallCount(),
                     waiting.getRegisteredAt(),
-                    position
+                    position,
+                    currentCallPosition
             );
         }
     }

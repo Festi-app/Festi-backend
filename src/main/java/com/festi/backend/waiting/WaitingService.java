@@ -35,7 +35,7 @@ public class WaitingService {
 
     public List<WaitingDTO.Response> getMyWaitings(String userId, UUID festivalId) {
         return waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc(userId, festivalId).stream()
-                .map(w -> WaitingDTO.Response.from(w, resolvePosition(w)))
+                .map(w -> WaitingDTO.Response.from(w, resolvePosition(w), resolveCurrentCallPosition(w.getBooth().getId())))
                 .toList();
     }
 
@@ -43,9 +43,10 @@ public class WaitingService {
         Booth booth = getBooth(boothId);
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
         List<Waiting> waitings = waitingRepository.findByBoothIdAndStatusInOrderByRegisteredAtAsc(boothId, ACTIVE_STATUSES);
+        Integer currentCallPosition = resolveCurrentCallPosition(boothId);
         int[] position = {1};
         return waitings.stream()
-                .map(w -> WaitingDTO.Response.from(w, w.getStatus() == WaitingStatus.WAITING ? position[0]++ : null))
+                .map(w -> WaitingDTO.Response.from(w, w.getStatus() == WaitingStatus.WAITING ? position[0]++ : null, currentCallPosition))
                 .toList();
     }
 
@@ -76,7 +77,7 @@ public class WaitingService {
                 .orElseThrow(() -> new NotFoundException("User not found."));
 
         Waiting waiting = waitingRepository.save(new Waiting(booth, user, partySize));
-        return WaitingDTO.Response.from(waiting, resolvePosition(waiting));
+        return WaitingDTO.Response.from(waiting, resolvePosition(waiting), resolveCurrentCallPosition(boothId));
     }
 
     @Transactional
@@ -133,6 +134,12 @@ public class WaitingService {
         }
 
         waiting.cancel();
+    }
+
+    private Integer resolveCurrentCallPosition(UUID boothId) {
+        return waitingRepository.countActiveBeforeFirstCalled(boothId, ACTIVE_STATUSES, WaitingStatus.CALLED)
+                .map(count -> (int) (count + 1))
+                .orElse(null);
     }
 
     private Integer resolvePosition(Waiting waiting) {

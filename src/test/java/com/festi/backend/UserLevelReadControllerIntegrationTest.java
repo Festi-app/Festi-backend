@@ -106,7 +106,7 @@ class UserLevelReadControllerIntegrationTest {
                         LocalTime.of(18, 0), LocalTime.of(19, 0))));
         when(waitingService.getMyWaitings(any(), any())).thenReturn(List.of(
                 new WaitingDTO.Response(waitingId, boothSummary, (short) 2, WaitingStatus.WAITING, (short) 0,
-                        OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC), 1)));
+                        OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC), 1, null)));
 
         String token = token(UserRole.USER);
         mockMvc.perform(get("/api/booths").header("Authorization", "Bearer " + token))
