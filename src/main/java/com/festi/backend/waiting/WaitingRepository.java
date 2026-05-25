@@ -37,4 +37,6 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
     Optional<Long> countActiveBeforeFirstCalled(@Param("boothId") UUID boothId,
                                                 @Param("statuses") List<WaitingStatus> statuses,
                                                 @Param("calledStatus") WaitingStatus calledStatus);
+
+    long countByBoothIdAndStatus(UUID boothId, WaitingStatus status);
 }

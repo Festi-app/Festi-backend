@@ -85,7 +85,7 @@ class UserLevelReadControllerIntegrationTest {
         UUID boothId = UUID.randomUUID();
         UUID waitingId = UUID.randomUUID();
         BoothDTO.Summary boothSummary = new BoothDTO.Summary(
-                boothId, "booth", BoothCategory.INFO, BoothType.DAY, "desc", "image", false);
+                boothId, "booth", BoothCategory.INFO, BoothType.DAY, "desc", "image", false, 0);
         when(boothService.getBooths(any(), any(), any())).thenReturn(List.of(boothSummary));
         when(boothService.getBooth(boothId)).thenReturn(new BoothDTO.Detail(
                 boothId, "booth", BoothCategory.INFO, BoothType.DAY, "desc", "09:00-18:00", "image", false));

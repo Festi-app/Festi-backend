@@ -35,7 +35,7 @@ public class WaitingService {
 
     public List<WaitingDTO.Response> getMyWaitings(String userId, UUID festivalId) {
         return waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc(userId, festivalId).stream()
-                .map(w -> WaitingDTO.Response.from(w, resolvePosition(w), resolveCurrentCallPosition(w.getBooth().getId())))
+                .map(w -> WaitingDTO.Response.from(w, resolvePosition(w), resolveCurrentCallPosition(w.getBooth().getId()), resolveWaitingTeamCount(w.getBooth().getId())))
                 .toList();
     }
 
@@ -44,9 +44,10 @@ public class WaitingService {
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
         List<Waiting> waitings = waitingRepository.findByBoothIdAndStatusInOrderByRegisteredAtAsc(boothId, ACTIVE_STATUSES);
         Integer currentCallPosition = resolveCurrentCallPosition(boothId);
+        Integer waitingTeamCount = resolveWaitingTeamCount(boothId);
         int[] position = {1};
         return waitings.stream()
-                .map(w -> WaitingDTO.Response.from(w, w.getStatus() == WaitingStatus.WAITING ? position[0]++ : null, currentCallPosition))
+                .map(w -> WaitingDTO.Response.from(w, w.getStatus() == WaitingStatus.WAITING ? position[0]++ : null, currentCallPosition, waitingTeamCount))
                 .toList();
     }
 
@@ -77,7 +78,7 @@ public class WaitingService {
                 .orElseThrow(() -> new NotFoundException("User not found."));
 
         Waiting waiting = waitingRepository.save(new Waiting(booth, user, partySize));
-        return WaitingDTO.Response.from(waiting, resolvePosition(waiting), resolveCurrentCallPosition(boothId));
+        return WaitingDTO.Response.from(waiting, resolvePosition(waiting), resolveCurrentCallPosition(boothId), resolveWaitingTeamCount(boothId));
     }
 
     @Transactional
@@ -134,6 +135,10 @@ public class WaitingService {
         }
 
         waiting.cancel();
+    }
+
+    private Integer resolveWaitingTeamCount(UUID boothId) {
+        return (int) waitingRepository.countByBoothIdAndStatus(boothId, WaitingStatus.WAITING);
     }
 
     private Integer resolveCurrentCallPosition(UUID boothId) {

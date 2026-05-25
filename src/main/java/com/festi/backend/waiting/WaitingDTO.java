@@ -43,10 +43,10 @@ public final class WaitingDTO {
             );
         }
 
-        public static Response from(Waiting waiting, Integer position, Integer currentCallPosition) {
+        public static Response from(Waiting waiting, Integer position, Integer currentCallPosition, Integer waitingTeamCount) {
             return new Response(
                     waiting.getId(),
-                    BoothDTO.Summary.from(waiting.getBooth()),
+                    BoothDTO.Summary.from(waiting.getBooth(), waitingTeamCount),
                     waiting.getPartySize(),
                     waiting.getStatus(),
                     waiting.getCallCount(),
