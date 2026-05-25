@@ -64,7 +64,7 @@ class BoothServiceTest {
 
     @Mock
     private ImageFileTransactionManager imageFileTransactionManager;
-    
+
     @Mock
     private WaitingRepository waitingRepository;
 
@@ -78,7 +78,7 @@ class BoothServiceTest {
     void setUp() {
         boothService = new BoothService(boothRepository, boothLocationRepository, festivalRepository,
                 festivalDayRepository, boothAuthorizationService, menuItemRepository, imageStorage,
-                imageFileTransactionManager);
+                imageFileTransactionManager, waitingRepository);
         festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
         ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
         manager = new AuthenticatedUser("manageruser", festival.getId(), UserRole.BOOTH_MANAGER);
