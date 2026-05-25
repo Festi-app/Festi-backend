@@ -20,7 +20,6 @@ class BoothApplicationDTOTest {
                 "Night Booth",
                 BoothType.NIGHT,
                 null,
-                null,
                 null
         );
 
@@ -37,7 +36,6 @@ class BoothApplicationDTOTest {
                 " ",
                 null,
                 null,
-                "https://example.com/" + "a".repeat(500),
                 null
         );
 

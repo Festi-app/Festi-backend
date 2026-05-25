@@ -151,6 +151,7 @@ class BoothApplicationServiceTest {
         assertThat(boothCaptor.getValue().getManager()).isEqualTo(manager);
         assertThat(boothCaptor.getValue().getName()).isEqualTo("Night Booth");
         assertThat(boothCaptor.getValue().getType()).isEqualTo(BoothType.NIGHT);
+        assertThat(boothCaptor.getValue().getImageUrl()).isNull();
         assertThat(response.boothId()).isEqualTo(boothId);
         assertThat(application.getBooth()).isSameAs(boothCaptor.getValue());
     }
@@ -219,7 +220,6 @@ class BoothApplicationServiceTest {
                 "Night Booth",
                 BoothType.NIGHT,
                 boothCategory,
-                "https://example.com/booth.png",
                 "description"
         );
     }
@@ -231,7 +231,6 @@ class BoothApplicationServiceTest {
                 "Night Booth",
                 BoothType.NIGHT,
                 BoothCategory.ALCOHOL,
-                "https://example.com/booth.png",
                 "description"
         );
         ReflectionTestUtils.setField(application, "id", id);

@@ -82,7 +82,8 @@ class BoothApplicationControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(createRequest())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.applicantId").value("manager1"))
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.imageUrl").doesNotExist());
     }
 
     @Test
@@ -178,7 +179,6 @@ class BoothApplicationControllerIntegrationTest {
                 "Night Booth",
                 BoothType.NIGHT,
                 BoothCategory.ALCOHOL,
-                "https://example.com/booth.png",
                 "description"
         );
     }
@@ -192,7 +192,6 @@ class BoothApplicationControllerIntegrationTest {
                 "Night Booth",
                 BoothType.NIGHT,
                 BoothCategory.ALCOHOL,
-                "https://example.com/booth.png",
                 "description",
                 status,
                 reviewMemo,

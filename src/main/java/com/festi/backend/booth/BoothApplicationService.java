@@ -56,7 +56,6 @@ public class BoothApplicationService {
                 request.boothName(),
                 request.boothType(),
                 category,
-                request.imageUrl(),
                 request.description()
         );
         return BoothApplicationDTO.Response.from(boothApplicationRepository.save(application));
@@ -94,8 +93,7 @@ public class BoothApplicationService {
                 application.getBoothName(),
                 application.getBoothCategory(),
                 application.getDescription(),
-                null,
-                application.getImageUrl()
+                null
         );
         booth.assignManager(manager);
         Booth savedBooth = boothRepository.save(booth);

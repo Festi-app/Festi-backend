@@ -77,6 +77,16 @@ class PostgresMigrationApplicationTests {
             """,
             Integer.class
         );
+        Integer applicationImageColumnCount = jdbcTemplate.queryForObject(
+            """
+            select count(*)
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'booth_applications'
+              and column_name = 'image_url'
+            """,
+            Integer.class
+        );
 
         assertThat(appliedMigrationCount).isGreaterThan(0);
         assertThat(phoneNullable).isEqualTo("NO");
@@ -84,6 +94,7 @@ class PostgresMigrationApplicationTests {
         assertThat(outboxColumnCount).isEqualTo(6);
         assertThat(applicationBoothIdColumnCount).isEqualTo(1);
         assertThat(applicationBoothConstraintCount).isEqualTo(2);
+        assertThat(applicationImageColumnCount).isZero();
     }
 
     @Test

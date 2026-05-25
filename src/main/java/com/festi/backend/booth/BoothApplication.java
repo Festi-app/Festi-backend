@@ -51,9 +51,6 @@ public class BoothApplication extends BaseTimeEntity {
     @Column(name = "booth_category", nullable = false, columnDefinition = "booth_category")
     private BoothCategory boothCategory = BoothCategory.ACTIVITY;
 
-    @Column(name = "image_url", length = 500)
-    private String imageUrl;
-
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -71,13 +68,12 @@ public class BoothApplication extends BaseTimeEntity {
 
     public BoothApplication(Festival festival, String applicantId, String boothName,
                             BoothType boothType, BoothCategory boothCategory,
-                            String imageUrl, String description) {
+                            String description) {
         this.festival = festival;
         this.applicantId = applicantId;
         this.boothName = boothName;
         this.boothType = boothType;
         this.boothCategory = boothCategory;
-        this.imageUrl = imageUrl;
         this.description = description;
     }
 

@@ -2,14 +2,22 @@ package com.festi.backend;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.festi.backend.booth.BoothService;
+import com.festi.backend.image.ImageStorage;
+import com.festi.backend.image.ImageStorage.ImageDirectory;
+import com.festi.backend.image.ImageStorage.StoredImage;
 import com.festi.backend.user.UserRole;
 import com.festi.backend.waiting.WaitingService;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -17,17 +25,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import javax.imageio.ImageIO;
 
-@SpringBootTest
+@SpringBootTest(properties = "festi.images.storage-root=build/test-media/security")
 @ActiveProfiles("test")
 class SecurityRoutePolicyIntegrationTest {
 
@@ -36,6 +47,9 @@ class SecurityRoutePolicyIntegrationTest {
 
     @Autowired
     private JwtEncoder jwtEncoder;
+
+    @Autowired
+    private ImageStorage imageStorage;
 
     @MockitoBean
     private BoothService boothService;
@@ -91,6 +105,27 @@ class SecurityRoutePolicyIntegrationTest {
     }
 
     @Test
+    void imageResourcesArePublicAndCorsAllowsPutUploads() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB), "png", output);
+        StoredImage stored = imageStorage.store(
+                new MockMultipartFile("image", "public.png", "image/png", output.toByteArray()),
+                ImageDirectory.BOOTHS);
+
+        mockMvc.perform(get(stored.publicUrl()))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "image/png"));
+        imageStorage.deleteIfManaged(stored.publicUrl());
+
+        mockMvc.perform(options("/api/booths/" + UUID.randomUUID() + "/image")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "PUT"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Methods",
+                        org.hamcrest.Matchers.containsString("PUT")));
+    }
+
+    @Test
     void swaggerDocumentationRoutesArePermitAll() throws Exception {
         mockMvc.perform(get("/swagger-ui/index.html"))
                 .andExpect(status().isOk());
@@ -113,6 +148,13 @@ class SecurityRoutePolicyIntegrationTest {
     @Test
     void regularUsersCannotEnterBoothManagerRoutes() throws Exception {
         mockMvc.perform(patch("/api/booths/" + UUID.randomUUID())
+                        .header("Authorization", "Bearer " + token(UserRole.USER)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        MockMultipartFile image = new MockMultipartFile("image", "booth.png", "image/png", new byte[]{1});
+        mockMvc.perform(multipart(HttpMethod.PUT, "/api/booths/{boothId}/image", UUID.randomUUID())
+                        .file(image)
                         .header("Authorization", "Bearer " + token(UserRole.USER)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));

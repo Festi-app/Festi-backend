@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,9 +22,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/booths/{boothId}/menus")
@@ -96,6 +100,42 @@ public class MenuController {
             @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
     ) {
         menuService.deleteMenu(currentUser, boothId, menuId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Upload menu image", description = "Replaces the managed image for a menu item with a JPEG or PNG file up to 5MB and 4096x4096.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Menu image updated"),
+            @ApiResponse(responseCode = "400", description = "Image file is missing or invalid"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth or menu item was not found"),
+            @ApiResponse(responseCode = "413", description = "Image file exceeds 5MB")
+    })
+    @PutMapping(value = "/{menuId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MenuDTO.Response> updateImage(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(description = "Menu item ID") @PathVariable UUID menuId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
+        return ResponseEntity.ok(menuService.updateImage(currentUser, boothId, menuId, image));
+    }
+
+    @Operation(summary = "Remove menu image", description = "Removes the managed menu image. The operation is idempotent when no image is set.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Menu image removed"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
+            @ApiResponse(responseCode = "404", description = "Booth or menu item was not found")
+    })
+    @DeleteMapping("/{menuId}/image")
+    public ResponseEntity<Void> removeImage(
+            @Parameter(description = "Booth ID") @PathVariable UUID boothId,
+            @Parameter(description = "Menu item ID") @PathVariable UUID menuId,
+            @Parameter(hidden = true) @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        menuService.removeImage(currentUser, boothId, menuId);
         return ResponseEntity.noContent().build();
     }
 

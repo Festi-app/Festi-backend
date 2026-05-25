@@ -48,23 +48,23 @@ public class MenuItem extends BaseTimeEntity {
     @Column(name = "sort_order", nullable = false)
     private short sortOrder = 0;
 
-    public MenuItem(Booth booth, String name, int price, String description,
-                    String imageUrl, short sortOrder) {
+    public MenuItem(Booth booth, String name, int price, String description, short sortOrder) {
         this.booth = booth;
         this.name = name;
         this.price = price;
         this.description = description;
-        this.imageUrl = imageUrl;
         this.sortOrder = sortOrder;
     }
 
-    public void update(String name, int price, String description, String imageUrl, short sortOrder) {
+    public void update(String name, int price, String description, short sortOrder) {
         this.name = name;
         this.price = price;
         this.description = description;
-        this.imageUrl = imageUrl;
         this.sortOrder = sortOrder;
     }
+
+    public void updateImage(String imageUrl) { this.imageUrl = imageUrl; }
+    public void removeImage() { this.imageUrl = null; }
 
     public void markSoldOut() { this.isSoldOut = true; }
     public void markAvailable() { this.isSoldOut = false; }

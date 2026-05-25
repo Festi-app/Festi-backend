@@ -13,6 +13,10 @@ import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.booth.BoothType;
 import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.NotFoundException;
+import com.festi.backend.image.ImageFileTransactionManager;
+import com.festi.backend.image.ImageStorage;
+import com.festi.backend.image.ImageStorage.ImageDirectory;
+import com.festi.backend.image.ImageStorage.StoredImage;
 import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
 import com.festi.backend.user.UserRole;
@@ -25,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +44,12 @@ class MenuServiceTest {
     @Mock
     private BoothAuthorizationService boothAuthorizationService;
 
+    @Mock
+    private ImageStorage imageStorage;
+
+    @Mock
+    private ImageFileTransactionManager imageFileTransactionManager;
+
     private MenuService menuService;
 
     private AuthenticatedUser manager;
@@ -46,7 +57,8 @@ class MenuServiceTest {
 
     @BeforeEach
     void setUp() {
-        menuService = new MenuService(boothRepository, menuItemRepository, boothAuthorizationService);
+        menuService = new MenuService(boothRepository, menuItemRepository, boothAuthorizationService,
+                imageStorage, imageFileTransactionManager);
         manager = new AuthenticatedUser("manageruser", UUID.randomUUID(), UserRole.BOOTH_MANAGER);
         festivalAdmin = new AuthenticatedUser("adminuser", UUID.randomUUID(), UserRole.FESTIVAL_ADMIN);
     }
@@ -81,7 +93,7 @@ class MenuServiceTest {
     void createMenuSucceedsForNightBooth() {
         UUID boothId = UUID.randomUUID();
         Booth booth = nightBooth(boothId);
-        MenuDTO.Request request = new MenuDTO.Request("메뉴A", 5000, "설명", null, (short) 1);
+        MenuDTO.Request request = new MenuDTO.Request("메뉴A", 5000, "설명", (short) 1);
         MenuItem saved = menu(booth, request.name(), request.sortOrder());
         ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
 
@@ -98,7 +110,7 @@ class MenuServiceTest {
     void createMenuThrowsBadRequestForDayBooth() {
         UUID boothId = UUID.randomUUID();
         Booth booth = dayBooth(boothId);
-        MenuDTO.Request request = new MenuDTO.Request("메뉴B", 3000, null, null, (short) 1);
+        MenuDTO.Request request = new MenuDTO.Request("메뉴B", 3000, null, (short) 1);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
 
@@ -110,7 +122,7 @@ class MenuServiceTest {
     @Test
     void createMenuThrowsNotFoundForMissingBooth() {
         UUID boothId = UUID.randomUUID();
-        MenuDTO.Request request = new MenuDTO.Request("메뉴C", 1000, null, null, (short) 1);
+        MenuDTO.Request request = new MenuDTO.Request("메뉴C", 1000, null, (short) 1);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.empty());
 
@@ -123,7 +135,7 @@ class MenuServiceTest {
     void createMenuThrowsAccessDeniedWhenNotAuthorized() {
         UUID boothId = UUID.randomUUID();
         Booth booth = nightBooth(boothId);
-        MenuDTO.Request request = new MenuDTO.Request("메뉴D", 2000, null, null, (short) 1);
+        MenuDTO.Request request = new MenuDTO.Request("메뉴D", 2000, null, (short) 1);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
         doThrow(new AccessDeniedException("Access is denied."))
@@ -142,7 +154,7 @@ class MenuServiceTest {
         Booth booth = nightBooth(boothId);
         MenuItem existing = menu(booth, "기존메뉴", (short) 1);
         ReflectionTestUtils.setField(existing, "id", menuId);
-        MenuDTO.Request request = new MenuDTO.Request("수정메뉴", 8000, "새설명", null, (short) 2);
+        MenuDTO.Request request = new MenuDTO.Request("수정메뉴", 8000, "새설명", (short) 2);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
         when(menuItemRepository.findByIdAndBoothId(menuId, boothId)).thenReturn(Optional.of(existing));
@@ -158,7 +170,7 @@ class MenuServiceTest {
         UUID boothId = UUID.randomUUID();
         UUID menuId = UUID.randomUUID();
         Booth booth = dayBooth(boothId);
-        MenuDTO.Request request = new MenuDTO.Request("수정", 1000, null, null, (short) 1);
+        MenuDTO.Request request = new MenuDTO.Request("수정", 1000, null, (short) 1);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
 
@@ -172,7 +184,7 @@ class MenuServiceTest {
         UUID boothId = UUID.randomUUID();
         UUID menuId = UUID.randomUUID();
         Booth booth = nightBooth(boothId);
-        MenuDTO.Request request = new MenuDTO.Request("수정", 1000, null, null, (short) 1);
+        MenuDTO.Request request = new MenuDTO.Request("수정", 1000, null, (short) 1);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
         when(menuItemRepository.findByIdAndBoothId(menuId, boothId)).thenReturn(Optional.empty());
@@ -198,6 +210,7 @@ class MenuServiceTest {
         menuService.deleteMenu(manager, boothId, menuId);
 
         verify(menuItemRepository).delete(existing);
+        verify(imageFileTransactionManager).deleteAfterCommit("image");
     }
 
     @Test
@@ -223,6 +236,43 @@ class MenuServiceTest {
         assertThatThrownBy(() -> menuService.deleteMenu(manager, boothId, menuId))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Menu not found");
+    }
+
+    // ── image management ─────────────────────────────────────────────────────
+
+    @Test
+    void replacesMenuImageThroughDedicatedOperation() {
+        UUID boothId = UUID.randomUUID();
+        UUID menuId = UUID.randomUUID();
+        Booth booth = nightBooth(boothId);
+        MenuItem existing = menu(booth, "메뉴", (short) 1);
+        ReflectionTestUtils.setField(existing, "id", menuId);
+        MockMultipartFile image = new MockMultipartFile("image", "new.jpg", "image/jpeg", new byte[]{1});
+        when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+        when(menuItemRepository.findByIdAndBoothId(menuId, boothId)).thenReturn(Optional.of(existing));
+        when(imageStorage.store(image, ImageDirectory.MENUS))
+                .thenReturn(new StoredImage("/media/images/menus/new.jpg"));
+
+        MenuDTO.Response response = menuService.updateImage(manager, boothId, menuId, image);
+
+        assertThat(response.imageUrl()).isEqualTo("/media/images/menus/new.jpg");
+        verify(imageFileTransactionManager).replaceAfterTransaction("image", "/media/images/menus/new.jpg");
+    }
+
+    @Test
+    void removesMenuImageIdempotently() {
+        UUID boothId = UUID.randomUUID();
+        UUID menuId = UUID.randomUUID();
+        Booth booth = nightBooth(boothId);
+        MenuItem existing = new MenuItem(booth, "메뉴", 5000, "desc", (short) 1);
+        ReflectionTestUtils.setField(existing, "id", menuId);
+        when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+        when(menuItemRepository.findByIdAndBoothId(menuId, boothId)).thenReturn(Optional.of(existing));
+
+        menuService.removeImage(manager, boothId, menuId);
+
+        assertThat(existing.getImageUrl()).isNull();
+        verify(imageFileTransactionManager).deleteAfterCommit(null);
     }
 
     // ── markSoldOut ──────────────────────────────────────────────────────────
@@ -283,6 +333,8 @@ class MenuServiceTest {
     }
 
     private MenuItem menu(Booth booth, String name, short sortOrder) {
-        return new MenuItem(booth, name, 5000, "desc", "image", sortOrder);
+        MenuItem menuItem = new MenuItem(booth, name, 5000, "desc", sortOrder);
+        menuItem.updateImage("image");
+        return menuItem;
     }
 }
