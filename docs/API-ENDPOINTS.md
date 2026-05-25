@@ -71,7 +71,7 @@
 | DELETE | `/api/booths/{boothId}/menus/{menuId}/image` | 메뉴 이미지 제거. 이미지가 없어도 `204` | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 | POST | `/api/booths/{boothId}/menus/{menuId}/sold-out` | 메뉴 품절 처리 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 
-이미지 업로드는 JPEG/PNG만 허용하며 최대 `5MB`, 최대 `4096x4096`이다. 저장된 이미지 URL은 `/media/images/booths/...` 또는 `/media/images/menus/...` 형식으로 응답된다. `BOOTH_MANAGER`는 본인 담당 부스만 변경할 수 있다.
+이미지 업로드는 JPEG/PNG만 허용한다. 기본 제한은 `5MB`, `4096x4096`이며 서버 설정으로 조정할 수 있다. 저장된 이미지 URL은 `/media/images/booths/...` 또는 `/media/images/menus/...` 형식으로 응답된다. `BOOTH_MANAGER`는 본인 담당 부스만 변경할 수 있다.
 
 ## 부스 위치 / 배치도
 

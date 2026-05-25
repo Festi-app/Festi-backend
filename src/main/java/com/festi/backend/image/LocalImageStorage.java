@@ -24,9 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class LocalImageStorage implements ImageStorage {
 
-    private static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
-    private static final int MAX_DIMENSION = 4096;
-
     private final ImageStorageProperties properties;
 
     @Override
@@ -72,8 +69,8 @@ public class LocalImageStorage implements ImageStorage {
         if (image == null || image.isEmpty()) {
             throw new BadRequestException("Image file must not be empty.");
         }
-        if (image.getSize() > MAX_FILE_SIZE) {
-            throw new PayloadTooLargeException("Image file must not exceed 5MB.");
+        if (image.getSize() > properties.maxFileSize().toBytes()) {
+            throw new PayloadTooLargeException("Image file exceeds the configured size limit.");
         }
 
         try (InputStream input = image.getInputStream();
@@ -91,8 +88,8 @@ public class LocalImageStorage implements ImageStorage {
                 String extension = resolveExtension(reader.getFormatName());
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
-                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-                    throw new BadRequestException("Image dimensions must not exceed 4096x4096.");
+                if (width > properties.maxWidth() || height > properties.maxHeight()) {
+                    throw new BadRequestException("Image dimensions exceed the configured limit.");
                 }
                 BufferedImage decoded = reader.read(0);
                 if (decoded == null) {

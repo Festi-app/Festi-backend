@@ -63,8 +63,10 @@ Gradle Wrapper가 포함되어 있으므로 별도 Gradle 설치는 필요하지
 | `FESTI_JWT_ACCESS_TOKEN_EXPIRATION` | `3600` | Access token 만료 시간, 초 단위 |
 | `FESTI_CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | 브라우저 요청을 허용할 origin 목록, 쉼표 구분 |
 | `FESTI_IMAGE_STORAGE_ROOT` | `./uploads/images` | 업로드 이미지가 영구 저장되는 디렉터리 |
-| `FESTI_IMAGE_MAX_FILE_SIZE` | `5MB` | multipart 파일 업로드 상한 |
+| `FESTI_IMAGE_MAX_FILE_SIZE` | `5MB` | multipart 파일과 이미지 storage validation의 크기 상한 |
 | `FESTI_IMAGE_MAX_REQUEST_SIZE` | `6MB` | multipart 요청 전체 상한 |
+| `FESTI_IMAGE_MAX_WIDTH` | `4096` | 업로드 이미지의 최대 폭, pixel |
+| `FESTI_IMAGE_MAX_HEIGHT` | `4096` | 업로드 이미지의 최대 높이, pixel |
 | `FESTI_WEB_PUSH_ENABLED` | `false` | VAPID Web Push 전송 활성화 여부 |
 | `FESTI_VAPID_PUBLIC_KEY` | 빈 값 | Push 구독 및 발송에 사용하는 VAPID 공개키 |
 | `FESTI_VAPID_PRIVATE_KEY` | 빈 값 | Web Push 발송에 사용하는 VAPID 비밀키 |
@@ -124,6 +126,10 @@ CREATE DATABASE festi OWNER festi_app;
 | `FESTI_JWT_SECRET` | Yes | 32바이트 이상 길이의 무작위 secret |
 | `FESTI_CORS_ALLOWED_ORIGINS` | Yes | `https://app.example.com` |
 | `FESTI_IMAGE_STORAGE_ROOT` | Yes when image uploads are used | `/srv/festi/uploads/images` |
+| `FESTI_IMAGE_MAX_FILE_SIZE` | Optional | `5MB` |
+| `FESTI_IMAGE_MAX_REQUEST_SIZE` | Optional | `6MB` |
+| `FESTI_IMAGE_MAX_WIDTH` | Optional | `4096` |
+| `FESTI_IMAGE_MAX_HEIGHT` | Optional | `4096` |
 | `FESTI_JWT_ACCESS_TOKEN_EXPIRATION` | Optional | `3600` |
 | `FESTI_WEB_PUSH_ENABLED` | Yes when Web Push is used | `true` |
 | `FESTI_VAPID_PUBLIC_KEY` | Yes when Web Push is enabled | VAPID 공개키 |
@@ -148,6 +154,9 @@ export FESTI_DATABASE_PASSWORD='strong-db-password'
 export FESTI_JWT_SECRET='replace-with-a-random-secret-at-least-32-bytes'
 export FESTI_CORS_ALLOWED_ORIGINS='https://app.example.com'
 export FESTI_IMAGE_STORAGE_ROOT='/srv/festi/uploads/images'
+export FESTI_IMAGE_MAX_FILE_SIZE='5MB'
+export FESTI_IMAGE_MAX_WIDTH='4096'
+export FESTI_IMAGE_MAX_HEIGHT='4096'
 export FESTI_JWT_ACCESS_TOKEN_EXPIRATION='3600'
 export FESTI_WEB_PUSH_ENABLED='true'
 export FESTI_VAPID_PUBLIC_KEY='replace-with-vapid-public-key'
@@ -171,7 +180,7 @@ java -jar build/libs/festi-backend-0.0.1-SNAPSHOT.jar
 
 DB 접속 정보가 잘못되었거나 migration 권한이 부족하면 서버는 정상 기동하지 않습니다. 운영 배포 전에는 같은 환경 변수로 한 번 직접 기동해 startup log를 확인하는 편이 안전합니다.
 
-이미지는 `FESTI_IMAGE_STORAGE_ROOT` 아래 `booths/`, `menus/`에 UUID 파일명으로 저장되고 Spring이 `/media/images/**`로 공개 제공합니다. 운영에서는 JAR 재배포 후에도 유지되는 호스트 디렉터리(예: `/srv/festi/uploads/images`)를 지정하고 애플리케이션 프로세스에 쓰기 권한을 부여해야 합니다. 업로드는 JPEG/PNG, `5MB`, `4096x4096` 제한을 적용합니다.
+이미지는 `FESTI_IMAGE_STORAGE_ROOT` 아래 `booths/`, `menus/`에 UUID 파일명으로 저장되고 Spring이 `/media/images/**`로 공개 제공합니다. 운영에서는 JAR 재배포 후에도 유지되는 호스트 디렉터리(예: `/srv/festi/uploads/images`)를 지정하고 애플리케이션 프로세스에 쓰기 권한을 부여해야 합니다. 업로드는 JPEG/PNG만 허용하며, 기본 제한은 `5MB`, `4096x4096`이고 `FESTI_IMAGE_MAX_FILE_SIZE`, `FESTI_IMAGE_MAX_WIDTH`, `FESTI_IMAGE_MAX_HEIGHT`로 조정합니다.
 
 ### 4. Deployment Checklist
 

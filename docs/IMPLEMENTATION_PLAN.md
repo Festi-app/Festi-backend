@@ -551,7 +551,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 메뉴 생성/수정은 `NIGHT` 또는 `FOOD_TRUCK` 부스에서만 허용한다.
 - 메뉴 삭제/품절 처리는 담당 부스 권한을 검증한 뒤 수행한다.
 - 부스/푸드트럭/메뉴 일반 정보 요청은 `imageUrl`을 받지 않으며 이미지는 전용 multipart API로만 교체 또는 제거한다.
-- 이미지 업로드는 JPEG/PNG, 최대 `5MB`, 최대 `4096x4096`만 허용한다.
+- 이미지 업로드는 JPEG/PNG만 허용하며, 기본 제한 `5MB`, `4096x4096`은 `festi.images` 설정으로 조정할 수 있다.
 - 로컬 이미지 URL은 `/media/images/**`로 공개하고, 교체/삭제 시 commit 이후 기존 관리 파일만 지운다. 신규 파일은 transaction rollback 시 정리한다.
 
 ### Image Upload And Removal
@@ -570,10 +570,10 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 #### Storage And Error Contract
 
-- `ImageStorageProperties`는 기본 저장 root `./uploads/images`와 공개 prefix `/media/images`를 바인딩한다. 운영 저장 root는 `FESTI_IMAGE_STORAGE_ROOT`, 예를 들어 `/srv/festi/uploads/images`로 주입한다.
+- `ImageStorageProperties`는 기본 저장 root `./uploads/images`, 공개 prefix `/media/images`, 파일 크기 제한 `5MB`, 폭/높이 제한 `4096x4096`을 바인딩한다. 운영에서는 `FESTI_IMAGE_STORAGE_ROOT`, `FESTI_IMAGE_MAX_FILE_SIZE`, `FESTI_IMAGE_MAX_WIDTH`, `FESTI_IMAGE_MAX_HEIGHT`로 주입할 수 있다.
 - `LocalImageStorage`는 원본 파일명을 저장 경로에 사용하지 않고 UUID를 사용한다. 부스 파일은 `/media/images/booths/{uuid}.jpg|png`, 메뉴 파일은 `/media/images/menus/{uuid}.jpg|png` URL로 반환한다.
-- 빈 파일, 누락된 `image` part, JPEG/PNG가 아닌 파일, 실제 디코딩할 수 없는 파일, 폭 또는 높이가 `4096`을 초과한 파일은 `400 INVALID_INPUT_VALUE`로 거부한다.
-- `5MB`를 초과한 파일 또는 multipart parser에서 제한을 초과한 요청은 `413 PAYLOAD_TOO_LARGE`로 반환한다.
+- 빈 파일, 누락된 `image` part, JPEG/PNG가 아닌 파일, 실제 디코딩할 수 없는 파일, 설정된 폭 또는 높이 제한을 초과한 파일은 `400 INVALID_INPUT_VALUE`로 거부한다.
+- 설정된 파일 크기 제한을 초과한 파일 또는 multipart parser에서 제한을 초과한 요청은 `413 PAYLOAD_TOO_LARGE`로 반환한다.
 - Spring MVC resource handler가 storage root를 `/media/images/**`에 매핑하고, `SecurityConfig`는 이 공개 이미지 조회를 인증 없이 허용한다.
 
 #### Transaction And Deletion Rules
@@ -595,7 +595,7 @@ flowchart TD
     D -->|없음| Y["404 RESOURCE_NOT_FOUND"]
     D --> E["BoothAuthorizationService<br/>부스 소유권 검사"]
     E -->|실패| X
-    E --> F["LocalImageStorage<br/>empty, 5MB, JPEG/PNG, decode, 4096px 검증"]
+    E --> F["LocalImageStorage<br/>empty, configured size/dimension, JPEG/PNG, decode 검증"]
     F -->|invalid| Z["400 INVALID_INPUT_VALUE"]
     F -->|too large| W["413 PAYLOAD_TOO_LARGE"]
     F --> G["UUID 파일명으로 신규 파일 저장<br/>/media/images/booths/..."]

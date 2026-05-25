@@ -27,6 +27,9 @@ festi:
   images:
     storage-root: ${FESTI_IMAGE_STORAGE_ROOT:./uploads/images}
     public-path: /media/images
+    max-file-size: ${FESTI_IMAGE_MAX_FILE_SIZE:5MB}
+    max-width: ${FESTI_IMAGE_MAX_WIDTH:4096}
+    max-height: ${FESTI_IMAGE_MAX_HEIGHT:4096}
   jwt:
     secret: ${FESTI_JWT_SECRET:local-dev-secret-change-me-at-least-32-bytes}
     access-token-expiration: ${FESTI_JWT_ACCESS_TOKEN_EXPIRATION:3600}

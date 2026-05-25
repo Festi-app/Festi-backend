@@ -234,7 +234,7 @@ type FestivalDayResponse = {
 
 - Auth: `BOOTH_MANAGER` for an owned booth, or `FESTIVAL_ADMIN`
 - Request: `multipart/form-data` with file part `image`
-- Accepts JPEG/PNG only, up to `5MB` and `4096x4096`.
+- Accepts JPEG/PNG only. Default server limits are `5MB` and `4096x4096`, and may be configured by deployment.
 - Response: `BoothDetail` with `imageUrl` such as `/media/images/booths/{uuid}.png`.
 
 `DELETE /api/booths/{boothId}/image`
@@ -336,7 +336,7 @@ type MenuResponse = {
 
 - Auth: `BOOTH_MANAGER` for an owned booth, or `FESTIVAL_ADMIN`
 - Request: `multipart/form-data` with file part `image`
-- Accepts JPEG/PNG only, up to `5MB` and `4096x4096`.
+- Accepts JPEG/PNG only. Default server limits are `5MB` and `4096x4096`, and may be configured by deployment.
 - Response: `MenuResponse` with `imageUrl` such as `/media/images/menus/{uuid}.jpg`.
 
 `DELETE /api/booths/{boothId}/menus/{menuId}/image`

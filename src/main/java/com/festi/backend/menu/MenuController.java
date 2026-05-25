@@ -103,14 +103,14 @@ public class MenuController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Upload menu image", description = "Replaces the managed image for a menu item with a JPEG or PNG file up to 5MB and 4096x4096.")
+    @Operation(summary = "Upload menu image", description = "Replaces the managed image for a menu item with a JPEG or PNG file within the configured upload limits.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Menu image updated"),
             @ApiResponse(responseCode = "400", description = "Image file is missing or invalid"),
             @ApiResponse(responseCode = "401", description = "Authentication is required"),
             @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
             @ApiResponse(responseCode = "404", description = "Booth or menu item was not found"),
-            @ApiResponse(responseCode = "413", description = "Image file exceeds 5MB")
+            @ApiResponse(responseCode = "413", description = "Image file exceeds the configured size limit")
     })
     @PutMapping(value = "/{menuId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuDTO.Response> updateImage(

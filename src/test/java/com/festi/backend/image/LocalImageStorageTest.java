@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.util.unit.DataSize;
 
 class LocalImageStorageTest {
 
@@ -27,7 +28,8 @@ class LocalImageStorageTest {
 
     @BeforeEach
     void setUp() {
-        storage = new LocalImageStorage(new ImageStorageProperties(tempDir, "/media/images"));
+        storage = new LocalImageStorage(
+                new ImageStorageProperties(tempDir, "/media/images", DataSize.ofMegabytes(5), 4096, 4096));
     }
 
     @Test
@@ -66,6 +68,22 @@ class LocalImageStorageTest {
         assertThatThrownBy(() -> storage.store(tooLarge, ImageDirectory.BOOTHS))
                 .isInstanceOf(PayloadTooLargeException.class);
         assertThatThrownBy(() -> storage.store(tooWide, ImageDirectory.BOOTHS))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void appliesConfiguredFileSizeAndResolutionLimits() throws IOException {
+        LocalImageStorage fileSizeLimitedStorage = new LocalImageStorage(
+                new ImageStorageProperties(tempDir, "/media/images", DataSize.ofBytes(10), 4096, 4096));
+        LocalImageStorage resolutionLimitedStorage = new LocalImageStorage(
+                new ImageStorageProperties(tempDir, "/media/images", DataSize.ofMegabytes(5), 2, 3));
+        MockMultipartFile largerThanConfiguredSize = new MockMultipartFile(
+                "image", "large.png", "image/png", new byte[11]);
+        MockMultipartFile widerThanConfiguredResolution = image("wide.png", "image/png", "png", 3, 3);
+
+        assertThatThrownBy(() -> fileSizeLimitedStorage.store(largerThanConfiguredSize, ImageDirectory.BOOTHS))
+                .isInstanceOf(PayloadTooLargeException.class);
+        assertThatThrownBy(() -> resolutionLimitedStorage.store(widerThanConfiguredResolution, ImageDirectory.BOOTHS))
                 .isInstanceOf(BadRequestException.class);
     }
 
