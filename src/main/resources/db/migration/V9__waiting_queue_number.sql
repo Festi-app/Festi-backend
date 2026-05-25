@@ -1,0 +1,1 @@
+ALTER TABLE waitings ADD COLUMN queue_number INT NOT NULL DEFAULT 0;

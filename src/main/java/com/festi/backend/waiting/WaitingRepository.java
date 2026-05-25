@@ -28,14 +28,11 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
     boolean existsByBoothIdAndUserIdAndFestivalIdAndStatusIn(@Param("boothId") UUID boothId, @Param("userId") String userId,
                                                                @Param("festivalId") UUID festivalId, @Param("statuses") List<WaitingStatus> statuses);
 
-    @Query("SELECT COUNT(w) FROM Waiting w WHERE w.booth.id = :boothId AND w.status = 'WAITING' AND w.registeredAt < :registeredAt")
-    long countByBoothIdAndStatusWaitingBeforeRegisteredAt(@Param("boothId") UUID boothId,
-                                                          @Param("registeredAt") java.time.OffsetDateTime registeredAt);
+    @Query("SELECT COALESCE(MAX(w.queueNumber), 0) FROM Waiting w WHERE w.booth.id = :boothId")
+    int findMaxQueueNumberByBoothId(@Param("boothId") UUID boothId);
 
-    @Query("SELECT COUNT(w) FROM Waiting w WHERE w.booth.id = :boothId AND w.status IN :statuses AND w.registeredAt < (SELECT MIN(w2.registeredAt) FROM Waiting w2 WHERE w2.booth.id = :boothId AND w2.status = :calledStatus)")
-    long countActiveBeforeFirstCalled(@Param("boothId") UUID boothId,
-                                      @Param("statuses") List<WaitingStatus> statuses,
-                                      @Param("calledStatus") WaitingStatus calledStatus);
+    @Query("SELECT MIN(w.queueNumber) FROM Waiting w WHERE w.booth.id = :boothId AND w.status = :status")
+    Integer findMinQueueNumberByBoothIdAndStatus(@Param("boothId") UUID boothId, @Param("status") WaitingStatus status);
 
     long countByBoothIdAndStatus(UUID boothId, WaitingStatus status);
 }

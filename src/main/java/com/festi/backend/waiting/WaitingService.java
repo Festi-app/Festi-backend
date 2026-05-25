@@ -35,7 +35,7 @@ public class WaitingService {
 
     public List<WaitingDTO.Response> getMyWaitings(String userId, UUID festivalId) {
         return waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc(userId, festivalId).stream()
-                .map(w -> WaitingDTO.Response.from(w, resolvePosition(w), resolveCurrentCallPosition(w.getBooth().getId()), resolveWaitingTeamCount(w.getBooth().getId())))
+                .map(w -> WaitingDTO.Response.from(w, w.getQueueNumber(), resolveCurrentCallPosition(w.getBooth().getId()), resolveWaitingTeamCount(w.getBooth().getId())))
                 .toList();
     }
 
@@ -45,9 +45,8 @@ public class WaitingService {
         List<Waiting> waitings = waitingRepository.findByBoothIdAndStatusInOrderByRegisteredAtAsc(boothId, ACTIVE_STATUSES);
         Integer currentCallPosition = resolveCurrentCallPosition(boothId);
         Integer waitingTeamCount = resolveWaitingTeamCount(boothId);
-        int[] position = {1};
         return waitings.stream()
-                .map(w -> WaitingDTO.Response.from(w, w.getStatus() == WaitingStatus.WAITING ? position[0]++ : null, currentCallPosition, waitingTeamCount))
+                .map(w -> WaitingDTO.Response.from(w, w.getQueueNumber(), currentCallPosition, waitingTeamCount))
                 .toList();
     }
 
@@ -77,8 +76,9 @@ public class WaitingService {
         User user = userRepository.findByIdAndFestivalId(userId, festivalId)
                 .orElseThrow(() -> new NotFoundException("User not found."));
 
-        Waiting waiting = waitingRepository.save(new Waiting(booth, user, partySize));
-        return WaitingDTO.Response.from(waiting, resolvePosition(waiting), resolveCurrentCallPosition(boothId), resolveWaitingTeamCount(boothId));
+        int queueNumber = waitingRepository.findMaxQueueNumberByBoothId(boothId) + 1;
+        Waiting waiting = waitingRepository.save(new Waiting(booth, user, partySize, queueNumber));
+        return WaitingDTO.Response.from(waiting, waiting.getQueueNumber(), resolveCurrentCallPosition(boothId), resolveWaitingTeamCount(boothId));
     }
 
     @Transactional
@@ -142,20 +142,7 @@ public class WaitingService {
     }
 
     private Integer resolveCurrentCallPosition(UUID boothId) {
-        if (waitingRepository.countByBoothIdAndStatus(boothId, WaitingStatus.CALLED) == 0) {
-            return null;
-        }
-        long ahead = waitingRepository.countActiveBeforeFirstCalled(boothId, ACTIVE_STATUSES, WaitingStatus.CALLED);
-        return (int) ahead + 1;
-    }
-
-    private Integer resolvePosition(Waiting waiting) {
-        if (waiting.getStatus() != WaitingStatus.WAITING) {
-            return null;
-        }
-        long ahead = waitingRepository.countByBoothIdAndStatusWaitingBeforeRegisteredAt(
-                waiting.getBooth().getId(), waiting.getRegisteredAt());
-        return (int) ahead + 1;
+        return waitingRepository.findMinQueueNumberByBoothIdAndStatus(boothId, WaitingStatus.CALLED);
     }
 
     private Booth getBooth(UUID boothId) {

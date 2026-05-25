@@ -56,6 +56,9 @@ public class Waiting {
     @Column(nullable = false, columnDefinition = "waiting_status")
     private WaitingStatus status = WaitingStatus.WAITING;
 
+    @Column(name = "queue_number", nullable = false)
+    private int queueNumber;
+
     @Column(name = "call_count", nullable = false)
     private short callCount = 0;
 
@@ -71,6 +74,13 @@ public class Waiting {
         this.booth = booth;
         this.user = user;
         this.partySize = partySize;
+    }
+
+    public Waiting(Booth booth, User user, short partySize, int queueNumber) {
+        this.booth = booth;
+        this.user = user;
+        this.partySize = partySize;
+        this.queueNumber = queueNumber;
     }
 
     public void call() {
