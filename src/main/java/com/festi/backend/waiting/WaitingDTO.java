@@ -26,7 +26,8 @@ public final class WaitingDTO {
             short partySize,
             WaitingStatus status,
             short callCount,
-            OffsetDateTime registeredAt
+            OffsetDateTime registeredAt,
+            Integer position
     ) {
         public static Response from(Waiting waiting) {
             return new Response(
@@ -35,7 +36,20 @@ public final class WaitingDTO {
                     waiting.getPartySize(),
                     waiting.getStatus(),
                     waiting.getCallCount(),
-                    waiting.getRegisteredAt()
+                    waiting.getRegisteredAt(),
+                    null
+            );
+        }
+
+        public static Response from(Waiting waiting, Integer position) {
+            return new Response(
+                    waiting.getId(),
+                    BoothDTO.Summary.from(waiting.getBooth()),
+                    waiting.getPartySize(),
+                    waiting.getStatus(),
+                    waiting.getCallCount(),
+                    waiting.getRegisteredAt(),
+                    position
             );
         }
     }

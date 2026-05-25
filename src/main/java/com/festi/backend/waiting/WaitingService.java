@@ -35,15 +35,17 @@ public class WaitingService {
 
     public List<WaitingDTO.Response> getMyWaitings(String userId, UUID festivalId) {
         return waitingRepository.findByUserIdAndFestivalIdOrderByRegisteredAtDesc(userId, festivalId).stream()
-                .map(WaitingDTO.Response::from)
+                .map(w -> WaitingDTO.Response.from(w, resolvePosition(w)))
                 .toList();
     }
 
     public List<WaitingDTO.Response> getActiveWaitings(AuthenticatedUser currentUser, UUID boothId) {
         Booth booth = getBooth(boothId);
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        return waitingRepository.findByBoothIdAndStatusInOrderByRegisteredAtAsc(boothId, ACTIVE_STATUSES).stream()
-                .map(WaitingDTO.Response::from)
+        List<Waiting> waitings = waitingRepository.findByBoothIdAndStatusInOrderByRegisteredAtAsc(boothId, ACTIVE_STATUSES);
+        int[] position = {1};
+        return waitings.stream()
+                .map(w -> WaitingDTO.Response.from(w, w.getStatus() == WaitingStatus.WAITING ? position[0]++ : null))
                 .toList();
     }
 
@@ -74,7 +76,7 @@ public class WaitingService {
                 .orElseThrow(() -> new NotFoundException("User not found."));
 
         Waiting waiting = waitingRepository.save(new Waiting(booth, user, partySize));
-        return WaitingDTO.Response.from(waiting);
+        return WaitingDTO.Response.from(waiting, resolvePosition(waiting));
     }
 
     @Transactional
@@ -131,6 +133,15 @@ public class WaitingService {
         }
 
         waiting.cancel();
+    }
+
+    private Integer resolvePosition(Waiting waiting) {
+        if (waiting.getStatus() != WaitingStatus.WAITING) {
+            return null;
+        }
+        long ahead = waitingRepository.countByBoothIdAndStatusWaitingBeforeRegisteredAt(
+                waiting.getBooth().getId(), waiting.getRegisteredAt());
+        return (int) ahead + 1;
     }
 
     private Booth getBooth(UUID boothId) {
