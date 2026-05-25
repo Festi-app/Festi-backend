@@ -367,6 +367,21 @@ class WaitingServiceTest {
     }
 
     @Test
+    void cancelsOnlyCalledWaitingAsNoShow() {
+        Festival festival = festival();
+        Booth booth = managedNightBooth(festival);
+        Waiting waiting = waiting(festival, booth, "alice123");
+        waiting.call();
+
+        when(waitingRepository.findById(waiting.getId())).thenReturn(Optional.of(waiting));
+
+        WaitingDTO.Response response = waitingService.updateWaitingStatus(
+                manager(festival), waiting.getId(), new WaitingDTO.StatusRequest(WaitingStatus.CANCELLED));
+
+        assertThat(response.status()).isEqualTo(WaitingStatus.CANCELLED);
+    }
+
+    @Test
     void rejectsSeatingWaitingBeforeItIsCalled() {
         Festival festival = festival();
         Booth booth = managedNightBooth(festival);

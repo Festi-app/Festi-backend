@@ -98,10 +98,16 @@ public class WaitingService {
                                                     WaitingDTO.StatusRequest request) {
         Waiting waiting = getWaiting(waitingId);
         boothAuthorizationService.assertCanManageBooth(currentUser, waiting.getBooth());
-        if (request.status() != WaitingStatus.SEATED || waiting.getStatus() != WaitingStatus.CALLED) {
-            throw new BadRequestException("Only called waitings can be marked as seated.");
+        if (waiting.getStatus() != WaitingStatus.CALLED) {
+            throw new BadRequestException("Only called waitings can be updated.");
         }
-        waiting.seat();
+        if (request.status() == WaitingStatus.SEATED) {
+            waiting.seat();
+        } else if (request.status() == WaitingStatus.CANCELLED) {
+            waiting.cancel();
+        } else {
+            throw new BadRequestException("Called waitings can only be marked as seated or cancelled.");
+        }
         return WaitingDTO.Response.from(waiting);
     }
 
