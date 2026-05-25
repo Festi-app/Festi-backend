@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${FESTI_DATABASE_NAME:-festi}
+      POSTGRES_USER: ${FESTI_DATABASE_USERNAME:-festi_app}
+      POSTGRES_PASSWORD: ${FESTI_DATABASE_PASSWORD:?Set FESTI_DATABASE_PASSWORD}
+    volumes:
+      - type: bind
+        source: ${FESTI_POSTGRES_DATA_ROOT:-/srv/festi-data/postgres}
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  api:
+    image: ${FESTI_API_IMAGE:?Set FESTI_API_IMAGE to the published Festi backend image tag}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FESTI_DATABASE_URL: jdbc:postgresql://postgres:5432/${FESTI_DATABASE_NAME:-festi}
+      FESTI_DATABASE_USERNAME: ${FESTI_DATABASE_USERNAME:-festi_app}
+      FESTI_DATABASE_PASSWORD: ${FESTI_DATABASE_PASSWORD:?Set FESTI_DATABASE_PASSWORD}
+      FESTI_JWT_SECRET: ${FESTI_JWT_SECRET:?Set FESTI_JWT_SECRET}
+      FESTI_JWT_ACCESS_TOKEN_EXPIRATION: ${FESTI_JWT_ACCESS_TOKEN_EXPIRATION:-3600}
+      FESTI_CORS_ALLOWED_ORIGINS: ${FESTI_CORS_ALLOWED_ORIGINS:?Set FESTI_CORS_ALLOWED_ORIGINS}
+      FESTI_IMAGE_STORAGE_ROOT: /data/festi/images
+      FESTI_IMAGE_MAX_FILE_SIZE: ${FESTI_IMAGE_MAX_FILE_SIZE:-5MB}
+      FESTI_IMAGE_MAX_REQUEST_SIZE: ${FESTI_IMAGE_MAX_REQUEST_SIZE:-6MB}
+      FESTI_IMAGE_MAX_WIDTH: ${FESTI_IMAGE_MAX_WIDTH:-4096}
+      FESTI_IMAGE_MAX_HEIGHT: ${FESTI_IMAGE_MAX_HEIGHT:-4096}
+      FESTI_WEB_PUSH_ENABLED: ${FESTI_WEB_PUSH_ENABLED:-false}
+      FESTI_VAPID_PUBLIC_KEY: ${FESTI_VAPID_PUBLIC_KEY:-}
+      FESTI_VAPID_PRIVATE_KEY: ${FESTI_VAPID_PRIVATE_KEY:-}
+      FESTI_VAPID_SUBJECT: ${FESTI_VAPID_SUBJECT:-}
+      FESTI_WEB_PUSH_TTL_SECONDS: ${FESTI_WEB_PUSH_TTL_SECONDS:-300}
+      FESTI_WEB_PUSH_WORKER_ENABLED: ${FESTI_WEB_PUSH_WORKER_ENABLED:-true}
+      FESTI_WEB_PUSH_POLL_DELAY_MILLIS: ${FESTI_WEB_PUSH_POLL_DELAY_MILLIS:-1000}
+      FESTI_WEB_PUSH_BATCH_SIZE: ${FESTI_WEB_PUSH_BATCH_SIZE:-20}
+      FESTI_WEB_PUSH_MAX_ATTEMPTS: ${FESTI_WEB_PUSH_MAX_ATTEMPTS:-2}
+      FESTI_WEB_PUSH_RETRY_DELAY_SECONDS: ${FESTI_WEB_PUSH_RETRY_DELAY_SECONDS:-30}
+      FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS: ${FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS:-300}
+    volumes:
+      - type: bind
+        source: ${FESTI_IMAGE_DATA_ROOT:-/srv/festi-data/images}
+        target: /data/festi/images
+    ports:
+      - "127.0.0.1:${FESTI_API_PORT:-8080}:8080"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
