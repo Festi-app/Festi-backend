@@ -108,6 +108,7 @@ class WaitingServiceTest {
         when(waitingRepository.existsByBoothIdAndUserIdAndFestivalIdAndStatusIn(
                 boothId, userId, festivalId, List.of(WaitingStatus.WAITING, WaitingStatus.CALLED))).thenReturn(false);
         when(userRepository.findByIdAndFestivalId(userId, festivalId)).thenReturn(Optional.of(user));
+        when(waitingRepository.findMaxQueueNumberByBoothId(boothId)).thenReturn(0);
         when(waitingRepository.save(any(Waiting.class))).thenReturn(saved);
 
         WaitingDTO.Response response = waitingService.registerWaiting(userId, festivalId, boothId, (short) 2);
