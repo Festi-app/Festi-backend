@@ -16,6 +16,7 @@ import com.festi.backend.location.BoothLocationRepository;
 import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
 import com.festi.backend.user.UserRole;
+import com.festi.backend.waiting.WaitingRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +47,9 @@ class BoothServiceTest {
     @Mock
     private BoothAuthorizationService boothAuthorizationService;
 
+    @Mock
+    private WaitingRepository waitingRepository;
+
     private BoothService boothService;
 
     private Festival festival;
@@ -54,7 +58,7 @@ class BoothServiceTest {
 
     @BeforeEach
     void setUp() {
-        boothService = new BoothService(boothRepository, boothLocationRepository, festivalRepository, festivalDayRepository, boothAuthorizationService);
+        boothService = new BoothService(boothRepository, boothLocationRepository, festivalRepository, festivalDayRepository, boothAuthorizationService, waitingRepository);
         festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");
         ReflectionTestUtils.setField(festival, "id", UUID.randomUUID());
         manager = new AuthenticatedUser("manageruser", festival.getId(), UserRole.BOOTH_MANAGER);

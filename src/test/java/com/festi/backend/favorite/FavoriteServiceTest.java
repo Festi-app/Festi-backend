@@ -16,6 +16,7 @@ import com.festi.backend.common.exception.ConflictException;
 import com.festi.backend.common.exception.NotFoundException;
 import com.festi.backend.festival.Festival;
 import com.festi.backend.festival.FestivalRepository;
+import com.festi.backend.waiting.WaitingRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +40,9 @@ class FavoriteServiceTest {
     @Mock
     private FestivalRepository festivalRepository;
 
+    @Mock
+    private WaitingRepository waitingRepository;
+
     private FavoriteService favoriteService;
 
     private Festival festival;
@@ -47,7 +51,7 @@ class FavoriteServiceTest {
 
     @BeforeEach
     void setUp() {
-        favoriteService = new FavoriteService(favoriteRepository, boothRepository, festivalRepository);
+        favoriteService = new FavoriteService(favoriteRepository, boothRepository, festivalRepository, waitingRepository);
         festivalId = UUID.randomUUID();
         userId = "testuser";
         festival = new Festival("Festi", LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 20), "desc");

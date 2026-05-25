@@ -27,4 +27,15 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
     @Query("SELECT COUNT(w) > 0 FROM Waiting w WHERE w.booth.id = :boothId AND w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId AND w.status IN :statuses")
     boolean existsByBoothIdAndUserIdAndFestivalIdAndStatusIn(@Param("boothId") UUID boothId, @Param("userId") String userId,
                                                                @Param("festivalId") UUID festivalId, @Param("statuses") List<WaitingStatus> statuses);
+
+    @Query("SELECT COUNT(w) FROM Waiting w WHERE w.booth.id = :boothId AND w.status = 'WAITING' AND w.registeredAt < :registeredAt")
+    long countByBoothIdAndStatusWaitingBeforeRegisteredAt(@Param("boothId") UUID boothId,
+                                                          @Param("registeredAt") java.time.OffsetDateTime registeredAt);
+
+    @Query("SELECT COUNT(w) FROM Waiting w WHERE w.booth.id = :boothId AND w.status IN :statuses AND w.registeredAt < (SELECT MIN(w2.registeredAt) FROM Waiting w2 WHERE w2.booth.id = :boothId AND w2.status = :calledStatus)")
+    long countActiveBeforeFirstCalled(@Param("boothId") UUID boothId,
+                                      @Param("statuses") List<WaitingStatus> statuses,
+                                      @Param("calledStatus") WaitingStatus calledStatus);
+
+    long countByBoothIdAndStatus(UUID boothId, WaitingStatus status);
 }

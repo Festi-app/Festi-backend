@@ -125,11 +125,13 @@ class BoothManagerWaitingControllerIntegrationTest {
     private WaitingDTO.Response waiting(WaitingStatus status) {
         return new WaitingDTO.Response(
                 waitingId,
-                new BoothDTO.Summary(boothId, "Night booth", BoothCategory.ALCOHOL, BoothType.NIGHT, "desc", null, true),
+                new BoothDTO.Summary(boothId, "Night booth", BoothCategory.ALCOHOL, BoothType.NIGHT, "desc", null, true, 1),
                 (short) 2,
                 status,
                 status == WaitingStatus.WAITING ? (short) 0 : (short) 1,
-                OffsetDateTime.parse("2026-05-25T00:00:00Z")
+                OffsetDateTime.parse("2026-05-25T00:00:00Z"),
+                status == WaitingStatus.WAITING ? 1 : null,
+                status == WaitingStatus.CALLED ? 1 : null
         );
     }
 

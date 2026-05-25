@@ -24,5 +24,13 @@ public final class FavoriteDTO {
                     favorite.getCreatedAt()
             );
         }
+
+        public static Response from(Favorite favorite, Integer waitingTeamCount) {
+            return new Response(
+                    favorite.getId(),
+                    BoothDTO.Summary.from(favorite.getBooth(), waitingTeamCount),
+                    favorite.getCreatedAt()
+            );
+        }
     }
 }
