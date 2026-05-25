@@ -131,7 +131,9 @@ class BoothManagerWaitingControllerIntegrationTest {
                 status == WaitingStatus.WAITING ? (short) 0 : (short) 1,
                 OffsetDateTime.parse("2026-05-25T00:00:00Z"),
                 status == WaitingStatus.WAITING ? 1 : null,
-                status == WaitingStatus.CALLED ? 1 : null
+                status == WaitingStatus.CALLED ? 1 : null,
+                null,
+                null
         );
     }
 

@@ -30,14 +30,16 @@ class RepositoryFetchPlanTest {
     }
 
     @Test
-    void waitingReadQueryFetchesBoothWithTheRootQuery() throws NoSuchMethodException {
+    void waitingReadQueryFetchesBoothAndUserWithTheRootQuery() throws NoSuchMethodException {
         Method method = WaitingRepository.class.getMethod(
                 "findByUserIdAndFestivalIdOrderByRegisteredAtDesc",
                 String.class,
                 UUID.class
         );
 
-        assertFetchesBooth(method);
+        EntityGraph entityGraph = method.getAnnotation(EntityGraph.class);
+        assertThat(entityGraph).isNotNull();
+        assertThat(entityGraph.attributePaths()).containsExactlyInAnyOrder("booth", "user");
     }
 
     private void assertFetchesBooth(Method method) {

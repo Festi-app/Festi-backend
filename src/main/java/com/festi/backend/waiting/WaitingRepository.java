@@ -12,13 +12,13 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
     @Query("SELECT w FROM Waiting w WHERE w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId")
     List<Waiting> findByUserIdAndFestivalId(@Param("userId") String userId, @Param("festivalId") UUID festivalId);
 
-    @EntityGraph(attributePaths = "booth")
+    @EntityGraph(attributePaths = {"booth", "user"})
     @Query("SELECT w FROM Waiting w WHERE w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId ORDER BY w.registeredAt DESC")
     List<Waiting> findByUserIdAndFestivalIdOrderByRegisteredAtDesc(@Param("userId") String userId, @Param("festivalId") UUID festivalId);
 
     List<Waiting> findByBoothIdAndStatusOrderByRegisteredAt(UUID boothId, WaitingStatus status);
 
-    @EntityGraph(attributePaths = "booth")
+    @EntityGraph(attributePaths = {"booth", "user"})
     List<Waiting> findByBoothIdAndStatusInOrderByRegisteredAtAsc(UUID boothId, List<WaitingStatus> statuses);
 
     @Query("SELECT COUNT(w) FROM Waiting w WHERE w.user.pk.id = :userId AND w.user.pk.festivalId = :festivalId AND w.status IN :statuses")
