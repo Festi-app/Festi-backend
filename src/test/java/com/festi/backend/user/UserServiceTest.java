@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import com.festi.backend.festival.Festival;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,5 +76,18 @@ class UserServiceTest {
         assertThat(response.phone()).isEqualTo("01099998888");
     }
 
+    @Test
+    void listsUsersByRole() {
+        User admin = new User(festival, "admin1", "hashed", "Admin", "01011111111");
+        admin.changeRole(UserRole.FESTIVAL_ADMIN);
+        when(userRepository.findByFestivalIdAndRole(festival.getId(), UserRole.FESTIVAL_ADMIN))
+                .thenReturn(List.of(admin));
+
+        List<UserDTO.Response> result = userService.getUsersByRole(festival.getId(), UserRole.FESTIVAL_ADMIN);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo("admin1");
+        assertThat(result.get(0).role()).isEqualTo(UserRole.FESTIVAL_ADMIN);
+    }
 
 }

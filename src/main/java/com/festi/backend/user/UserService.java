@@ -1,6 +1,7 @@
 package com.festi.backend.user;
 
 import com.festi.backend.common.exception.NotFoundException;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,13 @@ public class UserService {
         User user = findUser(userId, festivalId);
         user.updateProfile(request.name(), request.phone());
         return UserDTO.Response.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserDTO.Response> getUsersByRole(UUID festivalId, UserRole role) {
+        return userRepository.findByFestivalIdAndRole(festivalId, role).stream()
+                .map(UserDTO.Response::from)
+                .toList();
     }
 
     private User findUser(String userId, UUID festivalId) {

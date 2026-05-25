@@ -82,6 +82,7 @@ class BoothApplicationServiceTest {
         assertThat(applicationCaptor.getValue().getStatus()).isEqualTo(BoothApplicationStatus.PENDING);
         assertThat(applicationCaptor.getValue().getBoothCategory()).isEqualTo(BoothCategory.ACTIVITY);
         assertThat(response.status()).isEqualTo(BoothApplicationStatus.PENDING);
+        assertThat(response.boothId()).isNull();
     }
 
     @Test
@@ -129,13 +130,18 @@ class BoothApplicationServiceTest {
     @Test
     void approvesPendingApplicationAndCreatesManagedBooth() {
         UUID applicationId = UUID.randomUUID();
+        UUID boothId = UUID.randomUUID();
         BoothApplication application = application(applicationId, "manager1");
         User manager = user("manager1");
         when(boothApplicationRepository.findByIdAndFestivalId(applicationId, festival.getId()))
                 .thenReturn(Optional.of(application));
         when(userRepository.findByIdAndFestivalId("manager1", festival.getId()))
                 .thenReturn(Optional.of(manager));
-        when(boothRepository.save(any(Booth.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(boothRepository.save(any(Booth.class))).thenAnswer(invocation -> {
+            Booth booth = invocation.getArgument(0);
+            ReflectionTestUtils.setField(booth, "id", boothId);
+            return booth;
+        });
 
         BoothApplicationDTO.Response response = boothApplicationService.approveApplication(festival.getId(), applicationId);
 
@@ -145,13 +151,15 @@ class BoothApplicationServiceTest {
         assertThat(boothCaptor.getValue().getManager()).isEqualTo(manager);
         assertThat(boothCaptor.getValue().getName()).isEqualTo("Night Booth");
         assertThat(boothCaptor.getValue().getType()).isEqualTo(BoothType.NIGHT);
+        assertThat(response.boothId()).isEqualTo(boothId);
+        assertThat(application.getBooth()).isSameAs(boothCaptor.getValue());
     }
 
     @Test
     void rejectsRepeatedReviewTransitions() {
         UUID applicationId = UUID.randomUUID();
         BoothApplication approved = application(applicationId, "manager1");
-        approved.approve();
+        approved.approve(new Booth("Night Booth", BoothCategory.ALCOHOL, BoothType.NIGHT));
         when(boothApplicationRepository.findByIdAndFestivalId(applicationId, festival.getId()))
                 .thenReturn(Optional.of(approved));
 
@@ -194,7 +202,7 @@ class BoothApplicationServiceTest {
     void rejectsDeletingApprovedApplications() {
         UUID applicationId = UUID.randomUUID();
         BoothApplication application = application(applicationId, "manager1");
-        application.approve();
+        application.approve(new Booth("Night Booth", BoothCategory.ALCOHOL, BoothType.NIGHT));
         when(boothApplicationRepository.findByIdAndFestivalId(applicationId, festival.getId()))
                 .thenReturn(Optional.of(application));
 

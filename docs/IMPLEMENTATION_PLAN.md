@@ -4,9 +4,9 @@
 
 Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot + Java 기반으로 구현하며, PostgreSQL ERD와 `docs/PATCH.md`의 변경사항을 기준으로 도메인 모델, JWT 인증, 역할 기반 인가, 사용자 조회 API를 구성한다.
 
-현재 체크아웃 기준으로 공통 인프라, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, 부스 신청/승인/삭제 워크플로우, 축제 관리자 변경 API, Swagger/OpenAPI 문서화까지 구현되어 있다.
+현재 체크아웃 기준으로 공통 인프라, UTC `OffsetDateTime` 기반 JPA auditing, PATCH 기반 도메인 재정렬, 축제별 로그인 ID 기반 인증/JWT, 기본 권한 체계, 모든 인증 사용자용 조회 API, 일반 사용자 즐겨찾기 API, 일반 사용자 웨이팅 등록/조회/취소 API, 부스 관리자 웨이팅 운영 API, Web Push 구독/표시 템플릿/호출 알림 발송 및 delivery 추적, 부스 신청/승인/삭제 워크플로우, 축제 관리자 변경 API, 부스 관리자 변경 API, Swagger/OpenAPI 문서화까지 구현되어 있다.
 
-남은 핵심 작업은 부스 관리자 변경 API, 부스 관리자 웨이팅 운영/호출/알림 API, 그리고 현재 구현된 일반 사용자 API의 validation/test 보강이다.
+남은 핵심 작업은 `FOOD_TRUCK` 관리자 배정 정책 보정과 현재 구현된 일반 사용자/부스 관리자 API의 validation/test 보강이다.
 
 이 문서는 현재 체크아웃 기준 구현 범위와 우선순위를 설명하며, 시점 의존적인 검증 이력과 세부 실행 로그는 별도 변경 이력 문서에서 관리한다.
 
@@ -22,8 +22,8 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 | 8 | 일반 사용자 API 구현 | Done |
 | 9 | 부스 신청/승인/삭제 워크플로우 구현 | Done |
 | 10 | 축제 관리자 API 구현 | Done |
-| 11 | 부스 관리자 API 구현 | Next |
-| 12 | 부스 관리자 웨이팅 운영 + 알림 API 구현 | Pending |
+| 11 | 부스 관리자 API 구현 | Done |
+| 12 | 부스 관리자 웨이팅 운영 + 알림 API 구현 | Done |
 | 13 | controller/service/repository 테스트 보강 | In Progress |
 | 14 | Swagger/OpenAPI 문서화 | Done |
 
@@ -60,6 +60,13 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - unique 기준은 `festival_id + zone_label + index + festival_day_id`
 - `Waiting`
   - `id`, `booth`, composite-key `user`, `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`
+- `PushSubscription`
+  - `id`, composite-key `user`, `endpoint`, `p256dhKey`, `authKey`, `createdAt`, `updatedAt`
+  - `endpoint`는 전역 unique이며 재등록 시 현재 사용자에게 재바인딩한다.
+- `WaitingNotificationEvent`
+  - `id`, `waiting`, `eventType`, payload snapshot(`title`, `body`, `icon`, `url`), `createdAt`
+- `PushNotificationDelivery`
+  - `id`, `event`, nullable `subscription`, endpoint snapshot, `status`, `responseStatus`, `failureReason`, `attemptedAt`, `createdAt`
 - `Favorite`
   - `id`, `festival`, `userId`, `booth`, `createdAt`
   - unique 기준은 `festival_id + user_id + booth_id`
@@ -101,6 +108,10 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - `PENDING`
   - `APPROVED`
   - `REJECTED`
+- `PushNotificationDeliveryStatus`
+  - `PENDING`
+  - `SENT`
+  - `FAILED`
 
 ### Implemented Repositories
 
@@ -113,14 +124,18 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - `findByCategory`
 - `MenuItemRepository`
   - `findByBoothIdOrderBySortOrder`
+  - `findByIdAndBoothId`
 - `BoothLocationRepository`
   - `findByDayAndTypeOrderByIndex`
   - `findByDayOrderByIndex`
+  - `existsByFestivalIdAndDayAndZoneLabelAndIndex`
 - `WaitingRepository`
   - `findByUserIdAndFestivalId`
   - `findByUserIdAndFestivalIdOrderByRegisteredAtDesc`
   - `findByBoothIdAndStatusOrderByRegisteredAt`
+  - `findByBoothIdAndStatusInOrderByRegisteredAtAsc`
   - `countByUserIdAndFestivalIdAndStatusIn`
+  - `existsByBoothIdAndUserIdAndFestivalIdAndStatusIn`
 - `FavoriteRepository`
   - `findByFestivalIdAndUserIdOrderByCreatedAtDesc`
   - `existsByFestivalIdAndUserIdAndBoothId`
@@ -128,14 +143,28 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
 - `BoothApplicationRepository`
   - `findByFestivalId`
   - `findByFestivalIdAndApplicantId`
+  - `findByFestivalIdOrderByCreatedAtDesc`
+  - `findByIdAndFestivalId`
+  - `findFirstByFestivalIdAndApplicantIdOrderByCreatedAtDesc`
 - `FestivalRepository`
 - `FestivalDayRepository`
   - `findByFestivalIdOrderByDay`
   - `findByFestivalIdAndDay`
+  - `findByIdAndFestivalId`
+  - `existsByFestivalIdAndDay`
+  - `existsByFestivalIdAndDayAndIdNot`
 - `NoticeRepository`
   - `findByFestivalIdOrderByPinnedDescCreatedAtDesc`
+  - `findByIdAndFestivalId`
 - `TimelineRepository`
   - `findByFestivalIdOrderByDayAscStartTimeAsc`
+  - `findByIdAndFestivalId`
+- `PushSubscriptionRepository`
+  - `findByEndpoint`
+  - `findByIdAndUserIdAndFestivalId`
+  - `findByUserIdAndFestivalId`
+- `WaitingNotificationEventRepository`
+- `PushNotificationDeliveryRepository`
 
 `BoothAdminAssignmentRepository`와 `booth_admin_assignments` table은 PATCH 재정렬 후 제거되었다. v1 부스 관리자 소유권은 `booths.manager_id`를 기준으로 판단한다.
 
@@ -166,6 +195,21 @@ Festi-Backend는 대학교 축제 통합 플랫폼의 API 서버다. Spring Boot
   - `notices.pinned` 추가
   - `festival_days`, `timelines`, `booth_applications`, `favorites` table 추가
   - `booth_locations`를 `festival_day_id` 기반 슬롯 모델로 재구성
+- `V5__waiting_push_notification_persistence.sql`
+  - `push_subscriptions`, `waiting_notification_events`, `push_notification_deliveries` table 추가
+  - `push_notification_delivery_status` enum 추가
+- `V6__waiting_notification_outbox_processing.sql`
+  - 웨이팅 알림 outbox 처리 상태와 retry metadata 추가
+- `V7__booth_application_created_booth_reference.sql`
+  - `booth_applications.booth_id` nullable FK 및 unique 제약 추가
+  - 승인된 신청에서 생성 부스를 재조회할 수 있도록 연결 저장
+
+### Implemented Auditing and Temporal Policy
+
+- `@CreatedDate` 또는 `@LastModifiedDate`가 붙은 persisted audit timestamp는 `OffsetDateTime`을 사용한다.
+- `JpaAuditingConfig`는 `auditingDateTimeProvider`를 등록하고 JPA auditing에 UTC `OffsetDateTime` 값을 공급한다.
+- `Festival`, `FestivalDay`, `Timeline`의 일정 필드는 audit instant가 아니라 축제 날짜/운영 시간을 표현하므로 `LocalDate` / `LocalTime`을 유지한다.
+- `JpaAuditingConfigTest`와 `EntityTimeTypePolicyTest`가 auditing 타입 계약을 검증한다.
 
 ## Priority 1: Project Initialization
 
@@ -199,7 +243,8 @@ Spring Boot 프로젝트의 실행 가능한 최소 구조를 만들었다.
   - H2 기반 context test
 - Flyway migration 구조
 - JPA auditing
-  - `@EnableJpaAuditing`
+  - `@EnableJpaAuditing(dateTimeProviderRef = "auditingDateTimeProvider")`
+  - UTC `OffsetDateTime`을 공급하는 `DateTimeProvider`
   - `BaseTimeEntity`
 - 공통 예외 처리
   - `ErrorCode`
@@ -270,7 +315,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 ### Current Behavior
 
 - 회원가입/로그인은 `permitAll`
-- `POST /api/booth-applications`는 보안 정책상 `permitAll`이지만 아직 controller는 없다.
+- `POST /api/booth-applications`는 `permitAll`이며 신청 생성 controller/service가 구현되어 있다.
 - 모든 인증 사용자 조회 API와 본인 정보 API는 `authenticated`
 - 일반 사용자 전용 API는 `ROLE_USER`
 - 축제 관리자 API는 `ROLE_FESTIVAL_ADMIN`
@@ -309,6 +354,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - 필수 필터: `day`, `type`
   - 배정되지 않은 slot도 응답에 포함할 수 있다.
 - `GET /api/festival`
+- `GET /api/festival/days`
+  - 축제 운영 일자 ID와 날짜 목록을 조회한다.
 - `GET /api/festival/notices`
   - `pinned` 우선, 같은 그룹 안에서는 최신순
 - `GET /api/festival/timelines`
@@ -323,7 +370,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - 조회 API 구현
   - 부스 목록 / 상세 / 메뉴
   - 배치도
-  - 축제 정보 / 공지사항 / 공연 타임라인
+  - 축제 정보 / 축제 운영 일자 / 공지사항 / 공연 타임라인
   - 본인 정보 조회/수정
 - 조회 정책 반영
   - 부스 목록은 `day`, `type`, `category` 조합 필터 지원
@@ -346,6 +393,7 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - `BoothRepository`의 active 기반 조회 제거
   - `BoothApplication` entity, enum, repository, table 추가
   - `BoothApplicationStatus`는 `PENDING`, `APPROVED`, `REJECTED`
+  - 승인된 `BoothApplication`은 생성된 `Booth`를 nullable one-to-one 참조하고 응답에 `boothId`를 포함
 - Booth / Food Truck / Location
   - `BoothType.FOOD_TRUCK` 추가
   - 푸드트럭은 내부적으로 `Booth`로 표현
@@ -363,12 +411,10 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - `Waiting.user`를 축제별 composite user FK로 재구성
   - 사용자별 웨이팅 조회 repository 추가
 
-### Current Limitation
+### Remaining Domain Gaps
 
-- `BoothApplication`은 domain/repository/migration만 구현되어 있고 신청/승인/거절/삭제 service/controller는 아직 없다.
-- 배치도 slot 생성/배정/취소 API는 아직 없다.
-- 푸드트럭 manager를 축제 관리자 계정으로 배정하는 생성 로직은 아직 없다.
-- 부스 관리자용 웨이팅 목록/호출/상태 변경/알림 로직은 아직 없다.
+- `FOOD_TRUCK`의 manager를 축제 관리자 계정으로 제한하는 정책은 아직 적용되지 않았다. 현재 신청 승인 경로는 `boothType`과 무관하게 신청자의 `BOOTH_MANAGER` 계정을 생성 부스에 배정한다.
+- 부스 관리자용 웨이팅 목록/호출/상태 변경/오픈·마감과 Web Push 구독/event/delivery 저장, VAPID 기반 호출 Push 발송 연결은 구현되어 있다.
 
 ## Priority 8: General User APIs
 
@@ -394,7 +440,9 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - `USER`만 접근 가능
   - `NIGHT` 부스만 등록 가능
   - 부스의 `isWaitingOpen`이 true일 때만 등록 가능
+  - `partySize`는 1 이상이어야 함
   - 현재 사용자 기준 active waiting(`WAITING`, `CALLED`) 최대 3개 제한
+  - 같은 부스에는 active waiting을 중복 등록할 수 없음
 - `DELETE /api/waitings/{waitingId}`
   - `USER`만 접근 가능
   - 본인 웨이팅만 취소 가능
@@ -404,8 +452,8 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 - 즐겨찾기 request validation 보강
 - `FavoriteServiceTest` / favorite controller integration test 추가
-- `WaitingServiceTest`의 등록/취소 정책 테스트 추가
-- 웨이팅 controller integration test 추가
+- `WaitingServiceTest`의 등록 성공/취소 정책 테스트 추가
+- 일반 사용자 웨이팅 취소 controller integration test 추가
 
 ## Priority 9: Booth Application Workflow
 
@@ -424,12 +472,15 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 - `GET /api/booth-applications/me`
   - 현재 부스 관리자 계정의 신청 상태를 조회한다.
+  - 승인 완료 시 응답의 `boothId`로 담당 부스 관리 API를 호출할 수 있다.
 
 #### Festival Admin
 
 - `GET /api/admin/booth-applications`
 - `GET /api/admin/booth-applications/{applicationId}`
 - `POST /api/admin/booth-applications/{applicationId}/approve`
+  - `PENDING` 신청을 승인하고 생성된 `Booth`를 신청에 연결한다.
+  - 응답 `boothId`는 생성된 부스 UUID이며, 승인 전 또는 거절 응답에서는 `null`이다.
 - `POST /api/admin/booth-applications/{applicationId}/reject`
 - `DELETE /api/admin/booth-applications/{applicationId}`
 
@@ -477,9 +528,9 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 
 ## Priority 11: Booth Manager APIs
 
-부스 관리자 권한이 필요한 API를 구현한다. 현재는 `SecurityConfig` route policy와 `BoothAuthorizationService`만 준비되어 있고 controller/service는 없다.
+부스 관리자 권한이 필요한 부스/메뉴 변경 API가 구현되어 있다. `SecurityConfig`의 coarse role gate 이후 service 계층에서 담당 부스 소유권을 검증한다.
 
-### APIs To Implement
+### Implemented APIs
 
 - `PATCH /api/booths/{boothId}`
 - `POST /api/booths/{boothId}/menus`
@@ -487,46 +538,111 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `DELETE /api/booths/{boothId}/menus/{menuId}`
 - `POST /api/booths/{boothId}/menus/{menuId}/sold-out`
 
-### Validation Rules
+### Implemented Validation Rules
 
 - `BOOTH_MANAGER`는 본인 담당 부스만 수정할 수 있다.
 - `FESTIVAL_ADMIN`은 부스 관리자 API를 우회 통과할 수 있다.
 - 메뉴 생성/수정은 `NIGHT` 부스에서만 허용한다.
-- `FOOD_TRUCK`은 내부적으로 `Booth`지만 부스 관리자 계정이 아닌 축제 관리자 계정이 manager다.
+- 메뉴 삭제/품절 처리는 담당 부스 권한을 검증한 뒤 수행한다.
+
+### Follow-Up Hardening
+
+- `BoothServiceTest`에 부스 수정과 소유권 검증 연계 테스트를 추가한다.
+- `MenuServiceTest`에 메뉴 생성/수정/삭제/품절 및 `NIGHT` 제약 테스트를 추가한다.
+- 부스 관리자 변경 endpoint의 controller integration test를 추가한다.
+- `FOOD_TRUCK` 생성/승인 시 manager 정책을 도메인 규칙과 일치시키고 테스트로 고정한다.
 
 ## Priority 12: Booth Manager Waiting Operations and Notifications
 
-일반 사용자용 웨이팅 등록/조회/취소는 구현되어 있다. 남은 범위는 부스 관리자용 웨이팅 목록/호출/상태 변경, 웨이팅 오픈/마감, 호출 알림 전송이다.
+일반 사용자의 웨이팅 등록/조회/취소, 부스 관리자의 운영 목록/호출/착석/접수 상태 변경, 사용자의 Web Push 구독 관리, 호출 Push outbox 적재와 scheduler 기반 발송 및 결과 기록이 현재 코드에 구현되어 있다.
 
-### Implemented General User APIs
+### Implemented Runtime Scope
 
-- `POST /api/booths/{boothId}/waitings`
-- `GET /api/waitings`
-- `DELETE /api/waitings/{waitingId}`
+- 웨이팅 대상은 `NIGHT` 부스뿐이며 해당 부스의 `isWaitingOpen`이 true인 경우에만 사용자가 등록할 수 있다.
+- active waiting은 `WAITING`, `CALLED`이고, 한 사용자는 active waiting을 최대 3개 보유할 수 있으며 같은 부스에 active waiting을 중복 등록할 수 없다.
+- 호출 흐름은 `WAITING -> CALLED -> SEATED`를 기본으로 한다. `CALLED` 상태의 재호출은 허용되며 상태를 유지한 채 `callCount`를 증가시키고 새 Push 알림을 생성한다.
+- 사용자는 본인의 `WAITING` 또는 `CALLED` waiting만 `CANCELLED`로 취소할 수 있다.
+- `BOOTH_MANAGER`는 담당 부스의 웨이팅만 운영할 수 있고, `FESTIVAL_ADMIN`은 관리 API를 통과할 수 있다. 담당 부스 확인은 `BoothAuthorizationService`에서 수행한다.
 
-### APIs To Implement
+### Implemented Models
 
-- `GET /api/booths/{boothId}/waitings`
-- `POST /api/waitings/{waitingId}/call`
-- `PATCH /api/waitings/{waitingId}/status`
-- `PATCH /api/booths/{boothId}/waitings/status`
+#### Entities
 
-### Implemented Validation Rules
+| Entity | Table | 현재 역할과 주요 필드 |
+| --- | --- | --- |
+| `Waiting` | `waitings` | 부스와 composite-key 사용자를 연결하는 웨이팅. `partySize`, `status`, `callCount`, `registeredAt`, `updatedAt`을 보유한다. |
+| `PushSubscription` | `push_subscriptions` | 사용자 브라우저의 Web Push 구독. `endpoint`, `p256dhKey`, `authKey`와 사용자를 저장하며 `endpoint`는 전역 unique다. |
+| `WaitingNotificationEvent` | `waiting_notification_events` | 한 번의 호출/재호출로 생성된 outbox event와 payload snapshot. `eventType`, `title`, `body`, `icon`, `url`, `status`, `attemptCount`, `availableAt`, `processingStartedAt`, `processedAt`, `failureReason`, `createdAt`을 저장한다. |
+| `PushNotificationDelivery` | `push_notification_deliveries` | event를 한 subscription endpoint로 보낸 한 번의 시도. `status`, `responseStatus`, `failureReason`, `retryable`, `attemptedAt`, `createdAt`을 저장한다. |
 
-- 웨이팅 등록은 `USER`만 가능하다.
-- 웨이팅은 `NIGHT` 부스에만 등록할 수 있다.
-- `FOOD_TRUCK`은 `NIGHT`가 아니므로 웨이팅 등록 대상이 아니다.
-- 사용자당 최대 3개까지 웨이팅을 등록할 수 있다.
-- 부스의 웨이팅이 open 상태일 때만 등록할 수 있다.
-- 웨이팅 취소는 본인만 가능하다.
-- 취소 가능한 상태는 `WAITING`, `CALLED`다.
+#### DTOs And Payload Models
 
-### Validation Rules To Implement
+| Model | 필드 | 용도 |
+| --- | --- | --- |
+| `WaitingDTO.Request` | `partySize` | 사용자 웨이팅 등록 요청. `partySize >= 1` validation을 적용한다. |
+| `WaitingDTO.Response` | `id`, `boothSummary`, `partySize`, `status`, `callCount`, `registeredAt` | 사용자/관리자 웨이팅 응답 모델이다. |
+| `WaitingDTO.StatusRequest` | `status` | 관리자 착석 처리 요청. 서비스는 현재 `SEATED`만 허용한다. |
+| `WaitingDTO.OpenStatusRequest` | `open` | 관리자가 야간 부스의 웨이팅 접수를 열거나 닫는 요청이다. |
+| `PushSubscriptionDTO.Request` | `endpoint`, `keys` | 사용자 Push 구독 등록/갱신 요청이다. |
+| `PushSubscriptionDTO.Keys` | `p256dh`, `auth` | 브라우저 Web Push 암호화 key pair다. |
+| `PushSubscriptionDTO.Response` | `id`, `endpoint` | 등록 또는 갱신된 구독의 응답이다. |
+| `PushNotificationPayload` | `title`, `body`, `icon`, `url` | service worker가 표시와 클릭 이동에 사용할 실제 Push payload다. |
 
-- 호출 시 `callCount`를 증가시킨다.
-- 호출 시 서버는 사용자 앱으로 알림을 전송한다.
-- 상태 전이는 `WAITING -> CALLED -> SEATED` 흐름을 기본으로 하고, 사용자 취소는 `CANCELLED`로 처리한다.
-- 사용자 앱의 웨이팅 정보 갱신은 별도 push state sync가 아니라 새로고침 기반 조회로 처리한다.
+#### Enums And Configuration Models
+
+| Model | 값 또는 필드 | 용도 |
+| --- | --- | --- |
+| `WaitingStatus` | `WAITING`, `CALLED`, `SEATED`, `CANCELLED` | 웨이팅 생명주기 상태다. |
+| `WaitingNotificationEventStatus` | `PENDING`, `PROCESSING`, `COMPLETED`, `RETRY_WAIT`, `FAILED` | outbox event의 처리/재처리 상태다. |
+| `PushNotificationDeliveryStatus` | `PENDING`, `SENT`, `FAILED` | 구독별 전송 시도의 상태다. |
+| `PushMessageProperties.PushMessageTemplate` | `title`, `body`, `icon` | `push-messages.yml`의 `festi.push.messages.called` 표시 템플릿을 바인딩한다. |
+| `WebPushProperties` | `enabled`, `publicKey`, `privateKey`, `subject`, `ttlSeconds` | `festi.push.delivery` 설정을 바인딩하고 VAPID 발송 활성화 여부를 결정한다. |
+| `PushDeliveryWorkerProperties` | `enabled`, `pollDelayMillis`, `batchSize`, `maxAttempts`, `retryDelaySeconds`, `processingTimeoutSeconds` | outbox scheduler의 실행, batch, 재시도, processing lease 만료 기준을 바인딩한다. |
+
+### Implemented Endpoints
+
+모든 아래 endpoint는 controller 구현과 `SecurityConfig`의 접근 정책이 모두 존재한다. `인증 필요`가 `예`인 경우 JWT bearer token이 필요하다.
+
+| Method | Endpoint | 동작 | 인증 필요 | 허용 `UserRole` | 요청/응답 |
+| --- | --- | --- | --- | --- | --- |
+| `POST` | `/api/booths/{boothId}/waitings` | 본인 웨이팅 등록 | 예 | `USER` | `WaitingDTO.Request` -> `201 WaitingDTO.Response` |
+| `GET` | `/api/waitings` | 본인 웨이팅 목록 조회 | 예 | `USER` | `200 List<WaitingDTO.Response>` |
+| `DELETE` | `/api/waitings/{waitingId}` | 본인 active waiting 취소 | 예 | `USER` | `204` |
+| `GET` | `/api/booths/{boothId}/waitings` | 담당 부스의 active waiting 목록 조회 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `200 List<WaitingDTO.Response>` |
+| `POST` | `/api/waitings/{waitingId}/call` | active waiting 호출 또는 재호출 및 Push outbox event 생성 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `200 WaitingDTO.Response` |
+| `PATCH` | `/api/waitings/{waitingId}/status` | `CALLED` waiting을 착석 처리 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `WaitingDTO.StatusRequest` -> `200 WaitingDTO.Response` |
+| `PATCH` | `/api/booths/{boothId}/waitings/status` | `NIGHT` 부스 웨이팅 접수 오픈/마감 | 예 | `BOOTH_MANAGER`, `FESTIVAL_ADMIN` | `WaitingDTO.OpenStatusRequest` -> `200 BoothDTO.Detail` |
+| `POST` | `/api/push-subscriptions` | 본인의 Web Push 구독 등록 또는 갱신 | 예 | `USER` | `PushSubscriptionDTO.Request` -> `201 PushSubscriptionDTO.Response` |
+| `DELETE` | `/api/push-subscriptions/{subscriptionId}` | 본인 Web Push 구독 해제 | 예 | `USER` | `204` |
+
+### Waiting Operations
+
+1. 사용자가 `POST /api/booths/{boothId}/waitings`를 호출하면 서버는 `NIGHT` 부스 여부, 접수 오픈 여부, 사용자 active waiting 최대 3개 제한, 같은 부스 active 중복 여부를 검사하고 `WAITING` 상태의 `Waiting`을 생성한다.
+2. 사용자는 `GET /api/waitings`로 자신의 전체 웨이팅을 조회하고, 아직 active인 waiting은 `DELETE /api/waitings/{waitingId}`로 취소할 수 있다.
+3. 관리자는 `GET /api/booths/{boothId}/waitings`로 `WAITING`, `CALLED` 상태만 등록 시각 오름차순으로 확인한다.
+4. 관리자가 `POST /api/waitings/{waitingId}/call`을 호출하면 `WAITING`은 `CALLED`로 전이하고 `callCount`가 증가한다. 이미 호출된 `CALLED`도 재호출할 수 있으며 `callCount`와 알림 횟수가 추가된다.
+5. 관리자는 사용자가 입장하면 `PATCH /api/waitings/{waitingId}/status`에 `{ "status": "SEATED" }`를 보내 `CALLED -> SEATED` 전이를 수행한다.
+6. 관리자는 `PATCH /api/booths/{boothId}/waitings/status`로 `NIGHT` 부스의 신규 접수를 열거나 닫는다.
+
+### Push Notification Operation
+
+1. 사용자의 브라우저는 서버가 발송에 사용하는 VAPID 공개키와 동일한 공개키로 Web Push subscription을 생성하고 `POST /api/push-subscriptions`로 endpoint와 암호화 key를 등록한다. 현재 백엔드에는 VAPID 공개키를 조회하는 endpoint가 없다.
+2. `PushSubscriptionService`는 `endpoint`를 전역 unique로 취급한다. 같은 브라우저 endpoint가 다시 등록되면 최신 로그인 사용자와 key로 재바인딩하여 공유 기기에서 이전 계정으로 알림이 계속 가는 상황을 피한다.
+3. `POST /api/waitings/{waitingId}/call` 처리에서 `WaitingService`는 waiting을 호출 상태로 변경한 뒤 `WaitingNotificationService.enqueueCalled(...)`로 `PENDING` 상태의 `CALLED` outbox event를 같은 트랜잭션에 저장한다. 호출과 재호출은 각각 별도의 event를 만든다.
+4. event에는 `push-messages.yml`의 `called.title`, `called.body`, `called.icon`과 코드에 정의된 클릭 경로 `/waitings`가 payload snapshot으로 저장된다. 호출 API는 외부 Push 요청을 수행하지 않고 waiting 변경과 event 저장이 커밋되면 응답한다.
+5. `WaitingNotificationDeliveryScheduler`는 설정된 polling 주기마다 처리 가능한 event를 조회한다. `WaitingNotificationOutboxCoordinator`는 PostgreSQL `FOR UPDATE SKIP LOCKED`로 event를 claim하고 `PROCESSING`으로 전환하여 여러 worker가 같은 event를 동시에 가져가지 않게 한다.
+6. worker는 claim 트랜잭션이 종료된 뒤 해당 사용자의 현재 `PushSubscription`을 대상으로 `WebPushSender`를 호출한다. 따라서 VAPID HTTP 요청을 기다리는 동안 호출 API 트랜잭션이나 claim 트랜잭션을 열어 두지 않는다.
+7. 각 endpoint별 시도는 먼저 `PENDING` `PushNotificationDelivery`로 저장되고, 전송 후 `SENT` 또는 `FAILED` 및 `retryable` 여부가 기록된다. 이미 terminal 결과가 있는 endpoint는 event 재처리에서 다시 발송하지 않는다.
+8. `429`, `5xx`, interruption 이외의 transport exception은 event를 `RETRY_WAIT`로 두고 지연 후 다시 처리한다. 최대 처리 횟수를 넘긴 일시 실패 또는 interruption은 event를 `FAILED`로 종료한다. 비재시도 delivery만 존재하거나 모든 대상 전송이 완료되면 event는 `COMPLETED`가 된다.
+9. worker가 `PROCESSING` 중 종료되면 processing lease 만료 후 event를 다시 `RETRY_WAIT`로 회수한다. 이미 외부 전송이 성공했지만 결과 저장 전에 프로세스가 종료된 극단적 경우에는 Web Push 특성상 재처리로 중복 알림 가능성이 남는다.
+10. Push payload는 상태 전체를 동기화하는 응답이 아니다. 백엔드가 제공하는 계약은 프론트엔드 service worker가 `title`, `body`, `icon`으로 알림을 표시하고 클릭 시 `url`인 `/waitings`로 이동시키는 데 사용할 값이며, 최신 waiting 상태는 클라이언트가 `GET /api/waitings`로 다시 조회한다.
+
+### Persistence And Configuration Notes
+
+- `waiting_notification_events`는 사용자에게 전달하려던 메시지 snapshot과 outbox 처리 상태를 보존하고, `push_notification_deliveries`는 구독 endpoint별 실제 시도와 결과를 보존한다. 하나의 event에는 다수 기기 또는 지연 재시도로 여러 delivery가 연결될 수 있다.
+- 표시 문자열과 아이콘 경로는 `src/main/resources/push-messages.yml`의 `title`, `body`, `icon`만 변경해 수정할 수 있다. 클릭 경로 `url`은 설정 필드가 아니라 코드 계약이다.
+- 실제 Web Push 전송을 활성화하려면 `FESTI_WEB_PUSH_ENABLED=true`와 `FESTI_VAPID_PUBLIC_KEY`, `FESTI_VAPID_PRIVATE_KEY`, `FESTI_VAPID_SUBJECT`가 필요하다. TTL은 `FESTI_WEB_PUSH_TTL_SECONDS`로 설정한다.
+- outbox worker는 기본 활성화되며 `FESTI_WEB_PUSH_WORKER_ENABLED`, `FESTI_WEB_PUSH_POLL_DELAY_MILLIS`, `FESTI_WEB_PUSH_BATCH_SIZE`, `FESTI_WEB_PUSH_MAX_ATTEMPTS`, `FESTI_WEB_PUSH_RETRY_DELAY_SECONDS`, `FESTI_WEB_PUSH_PROCESSING_TIMEOUT_SECONDS`로 실행과 재처리 정책을 조정한다.
 
 ## Priority 13: Test Coverage
 
@@ -546,6 +662,9 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `BoothApplicationControllerIntegrationTest`
 - `FestivalAdminDTOTest`
 - `FestivalAdminControllerIntegrationTest`
+- `UserLevelReadControllerIntegrationTest`
+- `BoothManagerWaitingControllerIntegrationTest`
+- `PushSubscriptionControllerIntegrationTest`
 - `HmacJwtTokenServiceTest`
 - `JwtAuthenticationConverterTest`
 - `SecurityExceptionHandlersTest`
@@ -556,9 +675,20 @@ Spring Security 기반 인증/인가 구조를 적용했다.
 - `LocationServiceTest`
 - `FestivalServiceTest`
 - `WaitingServiceTest`
+- `WaitingDTOTest`
+- `PushSubscriptionDTOTest`
+- `PushSubscriptionServiceTest`
+- `NotificationPersistenceModelTest`
+- `PushMessagePropertiesTest`
+- `WaitingNotificationServiceTest`
+- `WaitingNotificationOutboxCoordinatorTest`
+- `WaitingNotificationDeliveryWorkerTest`
+- `VapidWebPushSenderTest`
 - `RepositoryFetchPlanTest`
 - `GlobalExceptionHandlerTest`
 - `ErrorResponseTest`
+- `JpaAuditingConfigTest`
+- `EntityTimeTypePolicyTest`
 
 ### Tests To Add Or Expand
 
@@ -572,21 +702,26 @@ Spring Security 기반 인증/인가 구조를 적용했다.
   - `BOOTH_MANAGER` / `FESTIVAL_ADMIN` 접근 시 `403`
 - `BoothServiceTest` 확장
   - 담당 부스 수정 권한
-  - `FOOD_TRUCK` 타입 조회/관리자 배정
+  - 부스 정보 변경 결과
+- `BoothApplicationServiceTest` 확장
+  - `FOOD_TRUCK` 승인 시 manager 배정 정책
 - `MenuServiceTest` 확장
   - 야간 부스 메뉴 생성 성공
   - 주간 부스 메뉴 생성 실패
+  - 수정/삭제 권한 검증
   - 품절 처리
+- 부스 관리자 변경 controller integration test
+  - `BOOTH_MANAGER` 담당 부스 변경 허용
+  - 다른 부스 변경 거절
+  - `FESTIVAL_ADMIN` 우회 허용
 - `WaitingServiceTest` 확장
-  - 일반 사용자 웨이팅 등록
-  - 일반 사용자 외 role 등록 실패
-  - 사용자당 최대 3개 제한
+  - 웨이팅 등록 성공
   - 야간 부스만 등록 가능
   - 본인 취소
-  - 호출 시 `callCount` 증가
   - 호출 시 알림 서비스 호출
-  - 상태 전이 검증
-  - 오픈/마감 검증
+- `WaitingControllerIntegrationTest`
+  - `USER` 웨이팅 등록/취소 접근 허용
+  - `BOOTH_MANAGER` / `FESTIVAL_ADMIN` 일반 사용자 route 접근 시 `403`
 
 CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필요한 변경은 `./gradlew postgresTest`도 통과해야 한다.
 
@@ -611,10 +746,11 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
   - `FavoriteController`
   - `WaitingController`
   - `BoothApplicationController`
+  - `PushSubscriptionController`
 
 ### Follow-Up
 
-- Priority 11-12에서 새 controller를 추가할 때 같은 OpenAPI annotation 기준을 적용한다.
+- Priority 12의 발송 관련 endpoint가 추가될 때 같은 OpenAPI annotation 기준을 적용한다.
 - 구현되지 않은 endpoint가 controller에 추가되면 `docs/API-ENDPOINTS.md`와 Swagger 설명을 함께 갱신한다.
 
 ## API Access Policy
@@ -636,6 +772,7 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `GET /api/booths/{boothId}/menus` - Implemented
 - `GET /api/locations` - Implemented
 - `GET /api/festival` - Implemented
+- `GET /api/festival/days` - Implemented
 - `GET /api/festival/notices` - Implemented
 - `GET /api/festival/timelines` - Implemented
 - `GET /api/users/me` - Implemented
@@ -649,19 +786,21 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - `POST /api/booths/{boothId}/waitings` - Implemented
 - `DELETE /api/waitings/{waitingId}` - Implemented
 - `GET /api/waitings` - Implemented
+- `POST /api/push-subscriptions` - Implemented
+- `DELETE /api/push-subscriptions/{subscriptionId}` - Implemented
 
 ### Booth Manager
 
 - `GET /api/booth-applications/me` - Implemented
-- `PATCH /api/booths/{boothId}` - Security policy only, controller pending
-- `POST /api/booths/{boothId}/menus` - Security policy only, controller pending
-- `PATCH /api/booths/{boothId}/menus/{menuId}` - Security policy only, controller pending
-- `DELETE /api/booths/{boothId}/menus/{menuId}` - Security policy only, controller pending
-- `POST /api/booths/{boothId}/menus/{menuId}/sold-out` - Security policy only, controller pending
-- `GET /api/booths/{boothId}/waitings` - Security policy only, controller pending
-- `POST /api/waitings/{waitingId}/call` - Security policy only, controller pending
-- `PATCH /api/waitings/{waitingId}/status` - Security policy only, controller pending
-- `PATCH /api/booths/{boothId}/waitings/status` - Security policy only, controller pending
+- `PATCH /api/booths/{boothId}` - Implemented
+- `POST /api/booths/{boothId}/menus` - Implemented
+- `PATCH /api/booths/{boothId}/menus/{menuId}` - Implemented
+- `DELETE /api/booths/{boothId}/menus/{menuId}` - Implemented
+- `POST /api/booths/{boothId}/menus/{menuId}/sold-out` - Implemented
+- `GET /api/booths/{boothId}/waitings` - Implemented
+- `POST /api/waitings/{waitingId}/call` - Implemented
+- `PATCH /api/waitings/{waitingId}/status` - Implemented
+- `PATCH /api/booths/{boothId}/waitings/status` - Implemented
 
 ### Festival Admin
 
@@ -694,6 +833,6 @@ CI acceptance 기준은 `./gradlew test` 통과다. DB migration 검증이 필�
 - 신청 삭제 시 신청과 함께 생성된 `BOOTH_MANAGER` 계정도 hard delete한다.
 - `BOOTH_MANAGER`는 전역 role로 유지한다.
 - 부스 관리자 계정은 일반 사용자 계정과 재사용하지 않는다.
-- `FOOD_TRUCK`은 내부적으로 `Booth`로 표현하되 축제 관리자 계정을 manager로 배정하는 생성 로직이 필요하다.
+- `FOOD_TRUCK`은 내부적으로 `Booth`로 표현한다. 축제 관리자 계정을 manager로 배정해야 한다는 정책과 달리 현재 신청 승인 구현은 신청자의 `BOOTH_MANAGER` 계정을 배정하므로 후속 보정이 필요하다.
 - 이미지 업로드 저장소 연동은 v1 도메인/API 구현 이후 별도 계획으로 분리한다.
-- `docs/API-ENDPOINTS.md`도 현재 구현 상태와 PATCH 이후 권한 구분에 맞춰 별도 갱신이 필요하다.
+- `docs/API-ENDPOINTS.md`는 현재 구현 상태와 PATCH 이후 권한 구분에 맞춰 갱신되어 있다.

@@ -76,6 +76,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/booths/*/waitings").hasRole("USER")
                         .requestMatchers(HttpMethod.DELETE, "/api/waitings/*").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/api/waitings").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/push-subscriptions").hasRole("USER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/push-subscriptions/*").hasRole("USER")
 
                         // Booth Manager (+ Festival Admin passthrough)
                         .requestMatchers(HttpMethod.GET, "/api/booth-applications/me")
@@ -121,6 +123,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/approve").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/booth-applications/*/reject").hasRole("FESTIVAL_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/booth-applications/*").hasRole("FESTIVAL_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/users").hasRole("FESTIVAL_ADMIN")
 
 
                         .anyRequest().denyAll()

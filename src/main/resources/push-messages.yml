@@ -1,0 +1,7 @@
+festi:
+  push:
+    messages:
+      called:
+        title: "입장 안내"
+        body: "부스로 방문해 주세요."
+        icon: "/icons/called.png"

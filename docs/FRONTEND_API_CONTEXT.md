@@ -1,6 +1,6 @@
 # Frontend API Context
 
-이 문서는 프론트엔드 프로젝트에서 사용하는 에이전트가 Festi 백엔드의 현재 API 구성을 이해하기 위한 컨텍스트 문서다. 기준일은 2026-05-23이며, 현재 코드베이스에서 실제 controller/service가 구현된 API만 다룬다.
+이 문서는 프론트엔드 프로젝트에서 사용하는 에이전트가 Festi 백엔드의 현재 API 구성을 이해하기 위한 컨텍스트 문서다. 기준일은 2026-05-25이며, 현재 코드베이스에서 실제 controller/service가 구현된 API만 다룬다.
 
 ## Source Of Truth
 
@@ -90,11 +90,11 @@
 
 | Role | Frontend meaning |
 | --- | --- |
-| `USER` | 일반 사용자. 즐겨찾기와 웨이팅 등록/조회/취소 가능 |
+| `USER` | 일반 사용자. 즐겨찾기, 웨이팅 등록/조회/취소, Push 구독 관리 가능 |
 | `BOOTH_MANAGER` | 부스 관리자. 본인 부스 신청 상태 조회 가능 |
 | `FESTIVAL_ADMIN` | 축제 관리자. 부스 신청 목록/상세/승인/거절/삭제 가능 |
 
-현재 구현된 조회 API는 인증된 모든 role이 접근할 수 있다. `favorites`와 일반 사용자 `waitings` API는 `USER` role만 접근할 수 있다.
+현재 구현된 조회 API는 인증된 모든 role이 접근할 수 있다. `favorites`, 일반 사용자 `waitings`, `push-subscriptions` API는 `USER` role만 접근할 수 있다.
 
 ## Error Shape
 
@@ -169,6 +169,7 @@ type BoothApplicationResponse = {
   id: string;
   festivalId: string;
   applicantId: string;
+  boothId: string | null;
   boothName: string;
   boothType: BoothType;
   boothCategory: BoothCategory;
@@ -255,11 +256,13 @@ type FestivalDayResponse = {
 
 - `boothCategory`, `imageUrl`, and `description` are optional. Omitted `boothCategory` defaults to `ACTIVITY`.
 - Response: `BoothApplicationResponse`
+- A newly created `PENDING` application has `boothId: null`.
 
 `GET /api/booth-applications/me`
 
 - Auth: `BOOTH_MANAGER` or `FESTIVAL_ADMIN`
 - Response: `BoothApplicationResponse`
+- After approval, use the non-null `boothId` for the manager's booth editing, menu, and waiting-management routes.
 
 `GET /api/admin/booth-applications`
 
@@ -276,6 +279,7 @@ type FestivalDayResponse = {
 - Auth: `FESTIVAL_ADMIN`
 - Approves a `PENDING` application and creates the managed booth.
 - Response: `BoothApplicationResponse`
+- The approval response includes the generated booth ID in `boothId`; `PENDING` and `REJECTED` application responses keep it `null`.
 
 `POST /api/admin/booth-applications/{applicationId}/reject`
 
@@ -614,10 +618,36 @@ Backend rules:
 - Only the owner can cancel.
 - Only `WAITING` and `CALLED` statuses can be cancelled.
 
+### Push Subscriptions
+
+`POST /api/push-subscriptions`
+
+- Auth: `USER`
+- Body:
+
+```json
+{
+  "endpoint": "https://push.example.com/subscription/1",
+  "keys": {
+    "p256dh": "browser-public-key",
+    "auth": "browser-auth-secret"
+  }
+}
+```
+
+- Response: `{ "id": string, "endpoint": string }`
+- Registering the same endpoint again updates its keys and associates it with the currently authenticated user.
+
+`DELETE /api/push-subscriptions/{subscriptionId}`
+
+- Auth: `USER`
+- Response: `204 No Content`
+- Removing another user's subscription is hidden as `404 RESOURCE_NOT_FOUND`.
+
 ## Frontend Agent Rules
 
 - Use `docs/API-ENDPOINTS.md` or `/v3/api-docs` as the endpoint boundary.
-- Do not add frontend calls to menu mutation or waiting call/status APIs until they appear in the implemented API docs.
+- Do not add Push delivery or notification-event API calls: only subscription registration/removal is currently exposed to clients.
 - Treat `401` as a login/session recovery path.
 - Treat `403` as a role mismatch path.
 - Treat `404` on owner-scoped resources as "not visible or not found"; do not reveal ownership assumptions in UI copy.

@@ -36,9 +36,11 @@
 | GET | `/api/booth-applications/me` | 현재 부스 관리자 계정의 신청 상태 조회 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 | GET | `/api/admin/booth-applications` | 부스 신청 목록 조회 | `FESTIVAL_ADMIN` |
 | GET | `/api/admin/booth-applications/{applicationId}` | 부스 신청 상세 조회 | `FESTIVAL_ADMIN` |
-| POST | `/api/admin/booth-applications/{applicationId}/approve` | 신청 승인 및 부스 생성 | `FESTIVAL_ADMIN` |
+| POST | `/api/admin/booth-applications/{applicationId}/approve` | 신청 승인 및 부스 생성. 응답의 `boothId`로 생성 부스를 식별한다. | `FESTIVAL_ADMIN` |
 | POST | `/api/admin/booth-applications/{applicationId}/reject` | 신청 거절. 선택 필드 `reviewMemo`를 받을 수 있다. | `FESTIVAL_ADMIN` |
 | DELETE | `/api/admin/booth-applications/{applicationId}` | 승인 전 또는 거절된 신청과 생성된 부스 관리자 계정을 삭제한다. | `FESTIVAL_ADMIN` |
+
+`BoothApplication` 응답의 `boothId`는 `PENDING` 또는 `REJECTED` 상태에서는 `null`이며, `APPROVED` 상태에서는 승인 과정에서 생성된 부스 ID이다.
 
 ## booths
 
@@ -47,6 +49,8 @@
 | GET | `/api/booths` | 부스 목록 조회. 선택 query: `day`, `type`, `category` | 인증 사용자 |
 | GET | `/api/booths/{boothId}` | 부스 상세 정보 조회 | 인증 사용자 |
 | POST | `/api/booths/{boothId}/waitings` | 특정 부스에 웨이팅 등록 | `USER` |
+| GET | `/api/booths/{boothId}/waitings` | 담당 부스의 active 웨이팅 목록 조회 | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PATCH | `/api/booths/{boothId}/waitings/status` | 야간 부스의 웨이팅 접수 오픈/마감. `open`을 받는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
 
 ## menu
 
@@ -77,6 +81,15 @@
 | --- | --- | --- | --- |
 | GET | `/api/waitings` | 본인 웨이팅 목록 조회 | `USER` |
 | DELETE | `/api/waitings/{waitingId}` | 본인 웨이팅 취소 | `USER` |
+| POST | `/api/waitings/{waitingId}/call` | active 웨이팅 호출 또는 재호출. 호출 횟수를 증가시킨다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+| PATCH | `/api/waitings/{waitingId}/status` | 호출된 웨이팅을 착석 처리. `status: "SEATED"`를 받는다. | `BOOTH_MANAGER` 또는 `FESTIVAL_ADMIN` |
+
+## push subscriptions
+
+| method | endpoint | 설명 | 권한 |
+| --- | --- | --- | --- |
+| POST | `/api/push-subscriptions` | Web Push 구독 등록 또는 갱신. `endpoint`, `keys.p256dh`, `keys.auth`를 받는다. | `USER` |
+| DELETE | `/api/push-subscriptions/{subscriptionId}` | 본인 Web Push 구독 해제 | `USER` |
 
 ## 축제 정보
 
