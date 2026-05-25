@@ -53,7 +53,7 @@ services:
         source: ${FESTI_IMAGE_DATA_ROOT:-/srv/festi-data/images}
         target: /data/festi/images
     ports:
-      - "127.0.0.1:${FESTI_API_PORT:-8080}:8080"
+      - "${FESTI_API_BIND_ADDRESS:-127.0.0.1}:${FESTI_API_PORT:-8080}:8080"
     networks:
       - backend
 
