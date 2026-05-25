@@ -33,6 +33,9 @@ target/
 *.pid
 *.hprof
 
+# Local image uploads
+uploads/
+
 # mcp setting (this is personal)
 .cgcignore
 mcp.json
