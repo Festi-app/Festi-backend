@@ -24,6 +24,7 @@ import com.festi.backend.menu.MenuItemRepository;
 import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
 import com.festi.backend.user.UserRole;
+import com.festi.backend.waiting.WaitingRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +64,9 @@ class BoothServiceTest {
 
     @Mock
     private ImageFileTransactionManager imageFileTransactionManager;
+    
+    @Mock
+    private WaitingRepository waitingRepository;
 
     private BoothService boothService;
 

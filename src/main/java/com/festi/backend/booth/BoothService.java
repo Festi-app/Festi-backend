@@ -15,6 +15,8 @@ import com.festi.backend.location.BoothLocationRepository;
 import com.festi.backend.menu.MenuItemRepository;
 import com.festi.backend.security.AuthenticatedUser;
 import com.festi.backend.security.BoothAuthorizationService;
+import com.festi.backend.waiting.WaitingRepository;
+import com.festi.backend.waiting.WaitingStatus;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,13 +40,14 @@ public class BoothService {
     private final MenuItemRepository menuItemRepository;
     private final ImageStorage imageStorage;
     private final ImageFileTransactionManager imageFileTransactionManager;
+    private final WaitingRepository waitingRepository;
 
     public List<BoothDTO.Summary> getBooths(LocalDate day, BoothType type, BoothCategory category) {
         if (day != null) {
             return getPlacedBooths(day, type, category);
         }
         return getBooths(type, category).stream()
-                .map(BoothDTO.Summary::from)
+                .map(b -> BoothDTO.Summary.from(b, (int) waitingRepository.countByBoothIdAndStatus(b.getId(), WaitingStatus.WAITING)))
                 .toList();
     }
 
@@ -143,7 +146,7 @@ public class BoothService {
         }
 
         return uniqueBooths.values().stream()
-                .map(BoothDTO.Summary::from)
+                .map(b -> BoothDTO.Summary.from(b, (int) waitingRepository.countByBoothIdAndStatus(b.getId(), WaitingStatus.WAITING)))
                 .toList();
     }
 

@@ -17,7 +17,8 @@ public final class BoothDTO {
             BoothType type,
             String description,
             String imageUrl,
-            boolean isWaitingOpen
+            boolean isWaitingOpen,
+            Integer waitingTeamCount
     ) {
         public static Summary from(Booth booth) {
             return new Summary(
@@ -27,7 +28,21 @@ public final class BoothDTO {
                     booth.getType(),
                     booth.getDescription(),
                     booth.getImageUrl(),
-                    booth.isWaitingOpen()
+                    booth.isWaitingOpen(),
+                    null
+            );
+        }
+
+        public static Summary from(Booth booth, Integer waitingTeamCount) {
+            return new Summary(
+                    booth.getId(),
+                    booth.getName(),
+                    booth.getCategory(),
+                    booth.getType(),
+                    booth.getDescription(),
+                    booth.getImageUrl(),
+                    booth.isWaitingOpen(),
+                    waitingTeamCount
             );
         }
     }

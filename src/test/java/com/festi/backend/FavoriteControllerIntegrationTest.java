@@ -69,7 +69,7 @@ class FavoriteControllerIntegrationTest {
         boothId = UUID.randomUUID();
         favoriteId = UUID.randomUUID();
         boothSummary = new BoothDTO.Summary(boothId, "맥주부스", BoothCategory.ALCOHOL, BoothType.NIGHT,
-                "설명", "image.jpg", false);
+                "설명", "image.jpg", false, 0);
     }
 
     // ── GET /api/favorites ───────────────────────────────────────────────────

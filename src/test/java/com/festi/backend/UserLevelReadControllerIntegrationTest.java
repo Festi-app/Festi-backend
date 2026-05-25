@@ -85,7 +85,7 @@ class UserLevelReadControllerIntegrationTest {
         UUID boothId = UUID.randomUUID();
         UUID waitingId = UUID.randomUUID();
         BoothDTO.Summary boothSummary = new BoothDTO.Summary(
-                boothId, "booth", BoothCategory.INFO, BoothType.DAY, "desc", "image", false);
+                boothId, "booth", BoothCategory.INFO, BoothType.DAY, "desc", "image", false, 0);
         when(boothService.getBooths(any(), any(), any())).thenReturn(List.of(boothSummary));
         when(boothService.getBooth(boothId)).thenReturn(new BoothDTO.Detail(
                 boothId, "booth", BoothCategory.INFO, BoothType.DAY, "desc", "09:00-18:00", "image", false));
@@ -106,7 +106,7 @@ class UserLevelReadControllerIntegrationTest {
                         LocalTime.of(18, 0), LocalTime.of(19, 0))));
         when(waitingService.getMyWaitings(any(), any())).thenReturn(List.of(
                 new WaitingDTO.Response(waitingId, boothSummary, (short) 2, WaitingStatus.WAITING, (short) 0,
-                        OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC))));
+                        OffsetDateTime.of(2026, 5, 18, 10, 0, 0, 0, ZoneOffset.UTC), 1, null)));
 
         String token = token(UserRole.USER);
         mockMvc.perform(get("/api/booths").header("Authorization", "Bearer " + token))
