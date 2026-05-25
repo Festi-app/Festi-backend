@@ -1,5 +1,6 @@
 package com.festi.backend.security;
 
+import com.festi.backend.image.ImageStorageProperties;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Arrays;
@@ -33,6 +34,7 @@ public class SecurityConfig {
 
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
+    private final ImageStorageProperties imageStorageProperties;
 
     @Bean
     SecurityFilterChain securityFilterChain(
@@ -53,7 +55,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/booth-applications").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/media/images/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, imageStorageProperties.publicPath() + "/**").permitAll()
 
                         // All Authenticated Users
                         .requestMatchers(

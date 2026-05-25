@@ -38,7 +38,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import javax.imageio.ImageIO;
 
-@SpringBootTest(properties = "festi.images.storage-root=build/test-media/security")
+@SpringBootTest(properties = {
+        "festi.images.storage-root=build/test-media/security",
+        "festi.images.public-path=/assets/festi"
+})
 @ActiveProfiles("test")
 class SecurityRoutePolicyIntegrationTest {
 
@@ -105,7 +108,7 @@ class SecurityRoutePolicyIntegrationTest {
     }
 
     @Test
-    void imageResourcesArePublicAndCorsAllowsPutUploads() throws Exception {
+    void configuredImageResourcesArePublicAndCorsAllowsPutUploads() throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         ImageIO.write(new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB), "png", output);
         StoredImage stored = imageStorage.store(
