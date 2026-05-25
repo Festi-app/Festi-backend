@@ -51,10 +51,10 @@ public class MenuController {
         return ResponseEntity.ok(menuService.getMenus(boothId));
     }
 
-    @Operation(summary = "Create menu item", description = "Creates a new menu item for the booth. Only allowed for NIGHT and FOOD_TRUCK booths.")
+    @Operation(summary = "Create menu item", description = "Creates a new menu item for the booth.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Menu item created"),
-            @ApiResponse(responseCode = "400", description = "Invalid request body or booth type does not support menus"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
             @ApiResponse(responseCode = "401", description = "Authentication is required"),
             @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
             @ApiResponse(responseCode = "404", description = "Booth was not found")
@@ -68,10 +68,10 @@ public class MenuController {
         return ResponseEntity.status(HttpStatus.CREATED).body(menuService.createMenu(currentUser, boothId, request));
     }
 
-    @Operation(summary = "Update menu item", description = "Updates an existing menu item. Only allowed for NIGHT and FOOD_TRUCK booths.")
+    @Operation(summary = "Update menu item", description = "Updates an existing menu item.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Menu item updated"),
-            @ApiResponse(responseCode = "400", description = "Invalid request body or booth type does not support menus"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
             @ApiResponse(responseCode = "401", description = "Authentication is required"),
             @ApiResponse(responseCode = "403", description = "BOOTH_MANAGER or FESTIVAL_ADMIN role is required, and BOOTH_MANAGER must own the booth"),
             @ApiResponse(responseCode = "404", description = "Booth or menu item was not found")
