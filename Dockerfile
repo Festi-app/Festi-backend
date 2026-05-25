@@ -28,6 +28,6 @@ LABEL org.opencontainers.image.source="https://github.com/Festi-app/Festi-backen
 
 USER 10001:10001
 
-EXPOSE 45566
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
