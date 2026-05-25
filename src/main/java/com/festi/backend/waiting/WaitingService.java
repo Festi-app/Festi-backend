@@ -142,9 +142,11 @@ public class WaitingService {
     }
 
     private Integer resolveCurrentCallPosition(UUID boothId) {
-        return waitingRepository.countActiveBeforeFirstCalled(boothId, ACTIVE_STATUSES, WaitingStatus.CALLED)
-                .map(count -> (int) (count + 1))
-                .orElse(null);
+        if (waitingRepository.countByBoothIdAndStatus(boothId, WaitingStatus.CALLED) == 0) {
+            return null;
+        }
+        long ahead = waitingRepository.countActiveBeforeFirstCalled(boothId, ACTIVE_STATUSES, WaitingStatus.CALLED);
+        return (int) ahead + 1;
     }
 
     private Integer resolvePosition(Waiting waiting) {

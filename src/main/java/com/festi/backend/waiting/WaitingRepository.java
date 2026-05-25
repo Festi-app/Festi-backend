@@ -1,7 +1,6 @@
 package com.festi.backend.waiting;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,9 +33,9 @@ public interface WaitingRepository extends JpaRepository<Waiting, UUID> {
                                                           @Param("registeredAt") java.time.OffsetDateTime registeredAt);
 
     @Query("SELECT COUNT(w) FROM Waiting w WHERE w.booth.id = :boothId AND w.status IN :statuses AND w.registeredAt < (SELECT MIN(w2.registeredAt) FROM Waiting w2 WHERE w2.booth.id = :boothId AND w2.status = :calledStatus)")
-    Optional<Long> countActiveBeforeFirstCalled(@Param("boothId") UUID boothId,
-                                                @Param("statuses") List<WaitingStatus> statuses,
-                                                @Param("calledStatus") WaitingStatus calledStatus);
+    long countActiveBeforeFirstCalled(@Param("boothId") UUID boothId,
+                                      @Param("statuses") List<WaitingStatus> statuses,
+                                      @Param("calledStatus") WaitingStatus calledStatus);
 
     long countByBoothIdAndStatus(UUID boothId, WaitingStatus status);
 }
