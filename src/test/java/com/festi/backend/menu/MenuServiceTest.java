@@ -11,7 +11,6 @@ import com.festi.backend.booth.Booth;
 import com.festi.backend.booth.BoothCategory;
 import com.festi.backend.booth.BoothRepository;
 import com.festi.backend.booth.BoothType;
-import com.festi.backend.common.exception.BadRequestException;
 import com.festi.backend.common.exception.NotFoundException;
 import com.festi.backend.image.ImageFileTransactionManager;
 import com.festi.backend.image.ImageStorage;
@@ -107,16 +106,20 @@ class MenuServiceTest {
     }
 
     @Test
-    void createMenuThrowsBadRequestForDayBooth() {
+    void createMenuSucceedsForDayBooth() {
         UUID boothId = UUID.randomUUID();
         Booth booth = dayBooth(boothId);
         MenuDTO.Request request = new MenuDTO.Request("메뉴B", 3000, null, (short) 1);
+        MenuItem saved = menu(booth, request.name(), request.sortOrder());
+        ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+        when(menuItemRepository.save(any(MenuItem.class))).thenReturn(saved);
 
-        assertThatThrownBy(() -> menuService.createMenu(manager, boothId, request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("NIGHT and FOOD_TRUCK booths");
+        MenuDTO.Response response = menuService.createMenu(manager, boothId, request);
+
+        assertThat(response.name()).isEqualTo("메뉴B");
+        verify(menuItemRepository).save(any(MenuItem.class));
     }
 
     @Test
@@ -166,17 +169,21 @@ class MenuServiceTest {
     }
 
     @Test
-    void updateMenuThrowsBadRequestForDayBooth() {
+    void updateMenuSucceedsForDayBooth() {
         UUID boothId = UUID.randomUUID();
         UUID menuId = UUID.randomUUID();
         Booth booth = dayBooth(boothId);
+        MenuItem existing = menu(booth, "기존메뉴", (short) 1);
+        ReflectionTestUtils.setField(existing, "id", menuId);
         MenuDTO.Request request = new MenuDTO.Request("수정", 1000, null, (short) 1);
 
         when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+        when(menuItemRepository.findByIdAndBoothId(menuId, boothId)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> menuService.updateMenu(manager, boothId, menuId, request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("NIGHT and FOOD_TRUCK booths");
+        MenuDTO.Response response = menuService.updateMenu(manager, boothId, menuId, request);
+
+        assertThat(response.name()).isEqualTo("수정");
+        assertThat(response.price()).isEqualTo(1000);
     }
 
     @Test
@@ -201,6 +208,23 @@ class MenuServiceTest {
         UUID boothId = UUID.randomUUID();
         UUID menuId = UUID.randomUUID();
         Booth booth = nightBooth(boothId);
+        MenuItem existing = menu(booth, "삭제메뉴", (short) 1);
+        ReflectionTestUtils.setField(existing, "id", menuId);
+
+        when(boothRepository.findById(boothId)).thenReturn(Optional.of(booth));
+        when(menuItemRepository.findByIdAndBoothId(menuId, boothId)).thenReturn(Optional.of(existing));
+
+        menuService.deleteMenu(manager, boothId, menuId);
+
+        verify(menuItemRepository).delete(existing);
+        verify(imageFileTransactionManager).deleteAfterCommit("image");
+    }
+
+    @Test
+    void deleteMenuSucceedsForDayBooth() {
+        UUID boothId = UUID.randomUUID();
+        UUID menuId = UUID.randomUUID();
+        Booth booth = dayBooth(boothId);
         MenuItem existing = menu(booth, "삭제메뉴", (short) 1);
         ReflectionTestUtils.setField(existing, "id", menuId);
 

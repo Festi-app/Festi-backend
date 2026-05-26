@@ -43,7 +43,6 @@ public class MenuService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        assertMenuManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.save(
                 new MenuItem(booth, request.name(), request.price(),
                         request.description(), request.sortOrder()));
@@ -56,7 +55,6 @@ public class MenuService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        assertMenuManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
         menuItem.update(request.name(), request.price(), request.description(), request.sortOrder());
@@ -91,7 +89,7 @@ public class MenuService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        assertMenuManageableBooth(booth);
+        assertMenuImageManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
         String previousUrl = menuItem.getImageUrl();
@@ -106,7 +104,7 @@ public class MenuService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new NotFoundException("Booth not found."));
         boothAuthorizationService.assertCanManageBooth(currentUser, booth);
-        assertMenuManageableBooth(booth);
+        assertMenuImageManageableBooth(booth);
         MenuItem menuItem = menuItemRepository.findByIdAndBoothId(menuId, boothId)
                 .orElseThrow(() -> new NotFoundException("Menu not found."));
         String previousUrl = menuItem.getImageUrl();
@@ -114,9 +112,9 @@ public class MenuService {
         imageFileTransactionManager.deleteAfterCommit(previousUrl);
     }
 
-    private void assertMenuManageableBooth(Booth booth) {
+    private void assertMenuImageManageableBooth(Booth booth) {
         if (booth.getType() != BoothType.NIGHT && booth.getType() != BoothType.FOOD_TRUCK) {
-            throw new BadRequestException("Menu management is only allowed for NIGHT and FOOD_TRUCK booths.");
+            throw new BadRequestException("Menu image management is only allowed for NIGHT and FOOD_TRUCK booths.");
         }
     }
 }
