@@ -5,11 +5,15 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class WaitingNotificationDeliveryWorker {
+
+    private static final Logger log = LoggerFactory.getLogger(WaitingNotificationDeliveryWorker.class);
 
     private final WaitingNotificationOutboxCoordinator coordinator;
     private final WebPushSender webPushSender;
@@ -36,6 +40,7 @@ public class WaitingNotificationDeliveryWorker {
                 if (result.successful()) {
                     coordinator.markDeliverySent(deliveryId, result.responseStatus(), now());
                 } else {
+                    log.warn("Push delivery failed for event {}: {}", task.eventId(), result.failureReason());
                     coordinator.markDeliveryFailed(
                             deliveryId, result.responseStatus(), result.failureReason(), result.retryable(), now());
                     if (result.retryable()) {
@@ -45,11 +50,13 @@ public class WaitingNotificationDeliveryWorker {
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 String failureReason = failureReason(exception);
+                log.warn("Push delivery interrupted for event {}: {}", task.eventId(), failureReason);
                 coordinator.markDeliveryFailed(deliveryId, null, failureReason, false, now());
                 coordinator.markFailed(task.eventId(), now(), failureReason);
                 return true;
             } catch (Exception exception) {
                 retryableFailure = failureReason(exception);
+                log.error("Push delivery transport error for event {}", task.eventId(), exception);
                 coordinator.markDeliveryFailed(deliveryId, null, retryableFailure, true, now());
             }
         }

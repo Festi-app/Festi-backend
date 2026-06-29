@@ -3,6 +3,8 @@ package com.festi.backend.security;
 import com.festi.backend.user.UserRole;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -11,6 +13,8 @@ import org.springframework.util.StringUtils;
 
 public class JwtAuthenticationConverter
         implements Converter<Jwt, AuthenticatedUserAuthenticationToken> {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationConverter.class);
 
     @Override
     public AuthenticatedUserAuthenticationToken convert(Jwt jwt) {
@@ -58,6 +62,7 @@ public class JwtAuthenticationConverter
     }
 
     private InvalidBearerTokenException invalidToken(String message) {
+        log.warn("Rejected JWT: {}", message);
         return new InvalidBearerTokenException(message);
     }
 }
