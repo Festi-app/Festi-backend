@@ -1,11 +1,6 @@
 spring:
   application:
     name: festi-backend
-
-logging:
-  level:
-    root: INFO
-    com.festi.backend: ${FESTI_LOG_LEVEL:INFO}
   servlet:
     multipart:
       max-file-size: ${FESTI_IMAGE_MAX_FILE_SIZE:5MB}
@@ -27,6 +22,11 @@ logging:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+logging:
+  level:
+    root: INFO
+    com.festi.backend: ${FESTI_LOG_LEVEL:INFO}
 
 festi:
   images:
