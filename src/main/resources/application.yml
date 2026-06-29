@@ -23,6 +23,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+logging:
+  level:
+    root: INFO
+    com.festi.backend: ${FESTI_LOG_LEVEL:INFO}
+
 festi:
   images:
     storage-root: ${FESTI_IMAGE_STORAGE_ROOT:./uploads/images}
